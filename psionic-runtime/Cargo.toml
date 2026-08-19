@@ -1,0 +1,13 @@
+[package]
+name = "psionic-runtime"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+psionic-engine = { path = "../psionic-engine" }
+
+winit = "0.29"
+raw-window-handle = "0.6.2"
+glow = "0.13"
+khronos-egl = "4.1"
+windows-sys = { version = "0.59", features = ["Win32_Graphics_Gdi", "Win32_Graphics_OpenGL", "Win32_Foundation", "Win32_System_LibraryLoader"] }
