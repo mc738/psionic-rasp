@@ -1,7 +1,18 @@
 ﻿use crate::maths::{Float2, Float3, Float4};
 use bytemuck::cast_slice;
 use glam::f32::Mat4;
-use glow::{ARRAY_BUFFER, ATOMIC_COUNTER_BUFFER, BYTE, CLAMP_TO_EDGE, COPY_READ_BUFFER, COPY_WRITE_BUFFER, Context, DISPATCH_INDIRECT_BUFFER, DRAW_INDIRECT_BUFFER, DYNAMIC_DRAW, DYNAMIC_READ, ELEMENT_ARRAY_BUFFER, HasContext, LINEAR, LINEAR_MIPMAP_LINEAR, NativeBuffer, NativeProgram, NativeTexture, NativeUniformLocation, NativeVertexArray, PARAMETER_BUFFER, PIXEL_PACK_BUFFER, PIXEL_UNPACK_BUFFER, QUERY_BUFFER, RGBA, SHADER_STORAGE_BUFFER, SHORT, STATIC_COPY, STATIC_DRAW, STATIC_READ, STREAM_COPY, STREAM_DRAW, STREAM_READ, TEXTURE_2D, TEXTURE_BASE_LEVEL, TEXTURE_BUFFER, TEXTURE_MAG_FILTER, TEXTURE_MAX_LEVEL, TEXTURE_MIN_FILTER, TEXTURE_WRAP_S, TEXTURE_WRAP_T, TEXTURE0, TRANSFORM_FEEDBACK_BUFFER, UNIFORM_BUFFER, UNSIGNED_BYTE, UNSIGNED_SHORT, INT, UNSIGNED_INT, FLOAT, DOUBLE, HALF_FLOAT, FIXED, UNSIGNED_INT_2_10_10_10_REV, UNSIGNED_INT_10F_11F_11F_REV, INT_2_10_10_10_REV};
+use glow::{
+    ARRAY_BUFFER, ATOMIC_COUNTER_BUFFER, BYTE, CLAMP_TO_EDGE, COPY_READ_BUFFER, COPY_WRITE_BUFFER,
+    Context, DISPATCH_INDIRECT_BUFFER, DOUBLE, DRAW_INDIRECT_BUFFER, DYNAMIC_DRAW, DYNAMIC_READ,
+    ELEMENT_ARRAY_BUFFER, FIXED, FLOAT, HALF_FLOAT, HasContext, INT, INT_2_10_10_10_REV, LINEAR,
+    LINEAR_MIPMAP_LINEAR, NativeBuffer, NativeProgram, NativeTexture, NativeUniformLocation,
+    NativeVertexArray, PARAMETER_BUFFER, PIXEL_PACK_BUFFER, PIXEL_UNPACK_BUFFER, QUERY_BUFFER,
+    RGBA, SHADER_STORAGE_BUFFER, SHORT, STATIC_COPY, STATIC_DRAW, STATIC_READ, STREAM_COPY,
+    STREAM_DRAW, STREAM_READ, TEXTURE_2D, TEXTURE_BASE_LEVEL, TEXTURE_BUFFER, TEXTURE_MAG_FILTER,
+    TEXTURE_MAX_LEVEL, TEXTURE_MIN_FILTER, TEXTURE_WRAP_S, TEXTURE_WRAP_T, TEXTURE0,
+    TRANSFORM_FEEDBACK_BUFFER, UNIFORM_BUFFER, UNSIGNED_BYTE, UNSIGNED_INT,
+    UNSIGNED_INT_2_10_10_10_REV, UNSIGNED_INT_10F_11F_11F_REV, UNSIGNED_SHORT,
+};
 use uuid::Uuid;
 
 pub struct BufferObject {
@@ -69,10 +80,24 @@ impl VertexArrayObject {
     pub fn bind(&self, gl: &Context) -> () {
         unsafe {
             gl.bind_vertex_array(Some(self.vertex_array));
+            // IMPORTANT:
+            // Some drivers do NOT store VBO/IBO bindings inside the VAO.
+            // If we don't re-bind the vertex + index buffers before each draw,
+            // the second model's VAO will overwrite the first model's buffer state,
+            // causing only the last model to render.
+            // Rebinding here guarantees each VAO uses its own buffers correctly.
+            self.index_buffer.bind(gl);
         }
     }
 
-    pub fn vertex_attribute(&self, gl: &Context, index: u32, pointer_type: VertexAttributePointerType, vertex_size: i32, offset: i32) {
+    pub fn vertex_attribute(
+        &self,
+        gl: &Context,
+        index: u32,
+        pointer_type: VertexAttributePointerType,
+        vertex_size: i32,
+        offset: i32,
+    ) {
         unsafe {
             let float_size = std::mem::size_of::<f32> as i32;
 
@@ -86,6 +111,14 @@ impl VertexArrayObject {
                 vertex_size * float_size,
                 offset * float_size,
             );
+        }
+    }
+
+    pub fn free(&self, gl: &Context) {
+        unsafe {
+            self.vertex_buffer.free(gl);
+            self.vertex_buffer.free(gl);
+            gl.delete_vertex_array(self.vertex_array)
         }
     }
 }
@@ -159,7 +192,7 @@ impl BufferTarget {
 }
 
 impl VertexBufferObject {
-    pub fn create(gl: Context, target: BufferTarget) -> Self {
+    pub fn create(gl: &Context) -> Self {
         unsafe {
             let buffer = gl.create_buffer().unwrap();
             VertexBufferObject { buffer }
@@ -190,7 +223,7 @@ impl VertexBufferObject {
 }
 
 impl IndexBufferObject {
-    pub fn create(gl: Context, target: BufferTarget) -> Self {
+    pub fn create(gl: &Context) -> Self {
         unsafe {
             let buffer = gl.create_buffer().unwrap();
             IndexBufferObject { buffer }
@@ -255,13 +288,85 @@ impl VertexAttributePointerType {
             VertexAttributePointerType::HalfFloat => HALF_FLOAT,
             VertexAttributePointerType::Fixed => FIXED,
             VertexAttributePointerType::Int64Arb => INT, // TODO fix
-            VertexAttributePointerType::Int64NV => INT, // TODO fix
+            VertexAttributePointerType::Int64NV => INT,  // TODO fix
             VertexAttributePointerType::UnsignedInt64Arb => UNSIGNED_INT, // TODO fix
             VertexAttributePointerType::UnsignedInt64NV => UNSIGNED_INT,
             VertexAttributePointerType::UnsignedInt2101010Rev => UNSIGNED_INT_2_10_10_10_REV,
             VertexAttributePointerType::UnsignedInt2101010RevExt => UNSIGNED_INT_2_10_10_10_REV,
             VertexAttributePointerType::UnsignedInt10f11f11fRev => UNSIGNED_INT_10F_11F_11F_REV,
-            VertexAttributePointerType::Int2101010Rev => INT_2_10_10_10_REV
+            VertexAttributePointerType::Int2101010Rev => INT_2_10_10_10_REV,
+        }
+    }
+}
+
+pub enum PrimitiveType {
+    Points,
+    Lines,
+    LineLoop,
+    LineStrip,
+    Triangles,
+    TriangleStrip,
+    TriangleFan,
+    Quads,
+    QuadsExt,
+    LinesAdjacency,
+    LinesAdjacencyArb,
+    LinesAdjacencyExt,
+    LineStripAdjacency,
+    LineStripAdjacencyArb,
+    LineStripAdjacencyExt,
+    TrianglesAdjacency,
+    TrianglesAdjacencyArb,
+    TrianglesAdjacencyExt,
+    TriangleStripAdjacency,
+    TriangleStripAdjacencyArb,
+    TriangleStripAdjacencyExt,
+    Patches,
+    PatchesExt,
+}
+
+impl PrimitiveType {
+    pub fn to_u32(&self) -> u32 {
+        match self {
+            PrimitiveType::Points => glow::POINTS,
+            PrimitiveType::Lines => glow::LINES,
+            PrimitiveType::LineLoop => glow::LINE_LOOP,
+            PrimitiveType::LineStrip => glow::LINE_STRIP,
+            PrimitiveType::Triangles => glow::TRIANGLES,
+            PrimitiveType::TriangleStrip => glow::TRIANGLE_STRIP,
+            PrimitiveType::TriangleFan => glow::TRIANGLE_FAN,
+            PrimitiveType::Quads => glow::QUADS,
+            PrimitiveType::QuadsExt => glow::QUADS,
+            PrimitiveType::LinesAdjacency => glow::LINES_ADJACENCY,
+            PrimitiveType::LinesAdjacencyArb => glow::LINES_ADJACENCY,
+            PrimitiveType::LinesAdjacencyExt => glow::LINES_ADJACENCY,
+            PrimitiveType::LineStripAdjacency => glow::LINE_STRIP_ADJACENCY,
+            PrimitiveType::LineStripAdjacencyArb => glow::LINE_STRIP_ADJACENCY,
+            PrimitiveType::LineStripAdjacencyExt => glow::LINE_STRIP_ADJACENCY,
+            PrimitiveType::TrianglesAdjacency => glow::TRIANGLES_ADJACENCY,
+            PrimitiveType::TrianglesAdjacencyArb => glow::TRIANGLES_ADJACENCY,
+            PrimitiveType::TrianglesAdjacencyExt => glow::TRIANGLES_ADJACENCY,
+            PrimitiveType::TriangleStripAdjacency => glow::TRIANGLE_STRIP_ADJACENCY,
+            PrimitiveType::TriangleStripAdjacencyArb => glow::TRIANGLE_STRIP_ADJACENCY,
+            PrimitiveType::TriangleStripAdjacencyExt => glow::TRIANGLE_STRIP_ADJACENCY,
+            PrimitiveType::Patches => glow::PATCHES,
+            PrimitiveType::PatchesExt => glow::PATCHES,
+        }
+    }
+}
+
+pub enum DrawElementType {
+    UnsignedByte,
+    UnsignedShort,
+    UnsignedInt,
+}
+
+impl DrawElementType {
+    pub fn to_u32(&self) -> u32 {
+        match self {
+            DrawElementType::UnsignedByte => glow::UNSIGNED_BYTE,
+            DrawElementType::UnsignedShort => glow::UNSIGNED_SHORT,
+            DrawElementType::UnsignedInt => glow::UNSIGNED_INT,
         }
     }
 }

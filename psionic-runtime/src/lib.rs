@@ -13,6 +13,7 @@ use winit::{
     event_loop::EventLoop,
     window::WindowBuilder,
 };
+use psionic_engine::rendering::shaders::Shader;
 
 pub mod platform;
 
@@ -63,24 +64,22 @@ impl RuntimeConfigurationBuilder {
     }
 }
 
-fn test_render_step(gl: &Context, scene: &SceneInstance, ctx: &RenderPipelineContext, batch: &RenderBatch) {
-    
-    match batch {
-        RenderBatch::Material(mrb) => {
-            // Bind material
-            
-            
-            for item in &mrb.items {
-                match scene.get_renderable_object(&item.object_internal_id) {
-                    None => {}
-                    Some(obj) => {
-                        obj.bind(gl);
-                        obj.draw(gl,&ctx.renderer);
-                    }
-                }
+fn test_render_step(gl: &Context, scene: &SceneInstance, ctx: &RenderPipelineContext, batch: &RenderBatch, active_shader_id: Option<u32>) {
+
+    for item in &batch.items {
+        match scene.get_renderable_object(&item.object_internal_id) {
+            None => {}
+            Some(obj) => {
+                obj.bind(gl);
+                // A bit ugly with the need to pass in a shader id.
+                // But the does allow this render step a bit more control.
+                // Though it would be better added to the ctx or render.
+                ctx.renderer.bind_model(gl, active_shader_id.unwrap(), &obj.get_transform().get_view_matrix());
                 
+                obj.draw(gl,&ctx.renderer);
             }
         }
+
     }
 }
 
@@ -123,7 +122,6 @@ impl Runtime {
         self.event_loop
             .run(move |event, target| {
                 target.set_control_flow(winit::event_loop::ControlFlow::Poll);
-
                 match event {
                     Event::WindowEvent {
                         event: WindowEvent::CloseRequested,

@@ -1,5 +1,5 @@
 use psionic_engine::maths::{Float3, Transform};
-use psionic_engine::rendering::core::{BufferObject, VertexArrayObject};
+use psionic_engine::rendering::core::{BufferObject, BufferUsage, DrawElementType, IndexBufferObject, PrimitiveType, VertexArrayObject, VertexAttributePointerType, VertexBufferObject};
 use psionic_engine::rendering::Renderer;
 use psionic_engine::rendering::traits::Renderable;
 use psionic_runtime::{Runtime, RuntimeConfiguration, RuntimeConfigurationBuilder};
@@ -30,16 +30,35 @@ impl QuadInstance {
                 Float3::new(5., 5., -5.),
                 Float3::new(-5., 5., -5.),];
 
+        let mut verts : Vec<f32> = Vec::new();
+
+        for v in &vertices {
+            verts.push(v.x);
+            verts.push(v.y);
+            verts.push(v.z);
+        }
+
         let indices =
             [ 0, 1, 2, 2, 3, 0 ];
 
+        let vertex_buffer = VertexBufferObject::create(gl);
+        vertex_buffer.bind(gl);
+        vertex_buffer.buffer_data(gl, verts.as_slice(), BufferUsage::StaticDraw);
+
+        let index_buffer = IndexBufferObject::create(gl);
+        index_buffer.bind(gl);
+        index_buffer.buffer_data(gl, indices.as_slice(), BufferUsage::StaticDraw);
+
+        let voa = VertexArrayObject::create(gl, vertex_buffer, index_buffer);
+
+        voa.vertex_attribute(gl, 0, VertexAttributePointerType::Float, 3, 0);
 
         Self {
             internal_id: 0,
             vertices,
             indices,
-            vao: (),
-            transform: (),
+            vao: voa,
+            transform: Transform::default(),
         }
     }
 }
@@ -67,10 +86,12 @@ impl Renderable for QuadInstance {
 
     fn bind(&self, gl: &glow::Context) -> () {
         self.vao.bind(gl);
+
     }
 
-    fn draw(&self, gl: &glow::Context, renderer: &Renderer) -> () {
-
+    fn draw(&self, gl: &glow::Context, renderer: &Renderer) -> u32 {
+        renderer.draw_elements(gl, PrimitiveType::Triangles, DrawElementType::UnsignedInt, self.indices.len() as i32);
+        1
     }
 
     fn get_internal_id(&self) -> u32 {

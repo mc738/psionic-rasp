@@ -7,7 +7,7 @@ pub struct Shader {
 }
 
 impl Shader {
-    pub fn create(gl: Context, vertex_code: &str, fragment_code: &str) -> Self {
+    pub fn create(gl: &Context, vertex_code: &str, fragment_code: &str) -> Self {
         unsafe {
             let vertex = gl.create_shader(glow::VERTEX_SHADER).unwrap();
             gl.shader_source(vertex, vertex_code);
@@ -79,7 +79,7 @@ impl Shader {
         }
     }
 
-    pub fn set_uniform_1_f32(self, gl: Context, name: &str, value: f32) -> () {
+    pub fn set_uniform_1_f32(&self, gl: &Context, name: &str, value: f32) -> () {
         unsafe {
             let location = gl.get_uniform_location(self.program, name);
 
@@ -94,7 +94,7 @@ impl Shader {
         }
     }
 
-    pub fn set_uniform_2_f32(self, gl: Context, name: &str, value: &impl AsFloat2) {
+    pub fn set_uniform_2_f32(&self, gl: &Context, name: &str, value: &impl AsFloat2) {
         unsafe {
             let location = gl.get_uniform_location(self.program, name);
             let value_f2 = value.as_float2();
@@ -109,8 +109,8 @@ impl Shader {
             }
         }
     }
-    
-    pub fn set_uniform_3_f32(self, gl: Context, name: &str, value: &impl AsFloat3) {
+
+    pub fn set_uniform_3_f32(&self, gl: &Context, name: &str, value: &impl AsFloat3) {
         unsafe {
             let location = gl.get_uniform_location(self.program, name);
             let value_f3 = value.as_float3();
@@ -125,8 +125,8 @@ impl Shader {
             }
         }
     }
-    
-    pub fn set_uniform_4_f32(self, gl: Context, name: &str, value: &impl AsFloat4) {
+
+    pub fn set_uniform_4_f32(&self, gl: &Context, name: &str, value: &impl AsFloat4) {
         unsafe {
             let location = gl.get_uniform_location(self.program, name);
             let value_f4 = value.as_float4();
@@ -141,8 +141,8 @@ impl Shader {
             }
         }
     }
-    
-    pub fn set_uniform_matrix_4_f32(self, gl:Context, name: &str, mat4: Mat4) {
+
+    pub fn set_uniform_matrix_4_f32(&self, gl: &Context, name: &str, mat4: &Mat4) {
         unsafe {
             let location = gl.get_uniform_location(self.program, name);
 
@@ -157,8 +157,8 @@ impl Shader {
         }
     }
 
-    
-    pub fn use_shader(self, gl: Context) {
+
+    pub fn use_shader(&self, gl: &Context) {
         unsafe {
             gl.use_program(Some(self.program));
         }
