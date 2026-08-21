@@ -386,6 +386,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "glam"
+version = "0.33.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c426daf70099baff33fac0ba85151c42424861c56828cef9ba02dacb78eb6b26"
+
+[[package]]
 name = "glow"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -724,7 +730,10 @@ dependencies = [
 name = "psionic-engine"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
+ "glam",
  "glow",
+ "uuid",
 ]
 
 [[package]]
@@ -743,8 +752,10 @@ dependencies = [
 name = "psionic-test"
 version = "0.1.0"
 dependencies = [
+ "glow",
  "psionic-engine",
  "psionic-runtime",
+ "uuid",
 ]
 
 [[package]]
@@ -1071,6 +1082,17 @@ name = "unicode-segmentation"
 version = "1.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6f5d3c3b1bf09027a88a6bc961fc00497d651009560b5463668dc81b0fa87a8"
+
+[[package]]
+name = "uuid"
+version = "1.24.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2cefc03fd367c0c6d4305de1b312cf00248c4114f4a0418ce6a6af769e3b0bd9"
+dependencies = [
+ "getrandom 0.4.3",
+ "js-sys",
+ "wasm-bindgen",
+]
 
 [[package]]
 name = "version_check"

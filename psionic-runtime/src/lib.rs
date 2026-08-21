@@ -1,4 +1,11 @@
-use psionic_engine::renderer::Renderer;
+use glow::Context;
+use psionic_engine::render_pipeline::{
+    RenderBatch, RenderBatchKey, RenderPipeline, RenderPipelineConfiguration,
+    RenderPipelineContext, RenderPipelineStep,
+};
+use psionic_engine::rendering::Renderer;
+use psionic_engine::rendering::traits::Renderable;
+use psionic_engine::scenes::SceneInstance;
 use winit::event_loop::ControlFlow;
 use winit::window::Window;
 use winit::{
@@ -9,36 +16,38 @@ use winit::{
 
 pub mod platform;
 
-pub struct RuntimeContext {
+pub struct TestRenderStep {}
 
-}
+pub struct RuntimeContext {}
 
 pub struct RuntimeEventHandlers {
-    on_update: Box<dyn Fn(&mut RuntimeContext)>
+    on_update: Box<dyn Fn(&mut RuntimeContext)>,
 }
 
 pub struct RuntimeConfiguration {
-    events: RuntimeEventHandlers
+    events: RuntimeEventHandlers,
 }
 
 pub struct Runtime {
+    gl: Context,
     event_loop: EventLoop<()>,
     window: Window,
-    renderer: Renderer,
+    render_pipeline: RenderPipeline,
     context: RuntimeContext,
     swap_buffers: Box<dyn Fn()>,
-    event_handers: RuntimeEventHandlers
+    event_handers: RuntimeEventHandlers,
 }
 
 pub struct RuntimeConfigurationBuilder {
-    event_handlers: RuntimeEventHandlers
+    event_handlers: RuntimeEventHandlers,
 }
-
 
 impl RuntimeConfigurationBuilder {
     pub fn new() -> Self {
         RuntimeConfigurationBuilder {
-            event_handlers: RuntimeEventHandlers { on_update: Box::new(| ctx| ()) }
+            event_handlers: RuntimeEventHandlers {
+                on_update: Box::new(|ctx| ()),
+            },
         }
     }
 
@@ -49,7 +58,28 @@ impl RuntimeConfigurationBuilder {
 
     pub fn build(self) -> RuntimeConfiguration {
         RuntimeConfiguration {
-            events : self.event_handlers
+            events: self.event_handlers,
+        }
+    }
+}
+
+fn test_render_step(gl: &Context, scene: &SceneInstance, ctx: &RenderPipelineContext, batch: &RenderBatch) {
+    
+    match batch {
+        RenderBatch::Material(mrb) => {
+            // Bind material
+            
+            
+            for item in &mrb.items {
+                match scene.get_renderable_object(&item.object_internal_id) {
+                    None => {}
+                    Some(obj) => {
+                        obj.bind(gl);
+                        obj.draw(gl,&ctx.renderer);
+                    }
+                }
+                
+            }
         }
     }
 }
@@ -63,18 +93,23 @@ impl Runtime {
             .build(&event_loop)
             .unwrap();
 
+        let key = RenderBatchKey::new(false, 0, 0);
+        let render_step = RenderPipelineStep::new(key, Box::new(test_render_step));
+
+        let renderer_cfg = RenderPipelineConfiguration::empty().add_render_step(render_step);
         #[cfg(target_os = "windows")]
         let (gl, swap_buffers) = platform::windows_wgl::create_gl_context(&window);
 
-        let renderer = Renderer::new(gl);
+        let render_pipeline = RenderPipeline::create(&gl, renderer_cfg);
 
         Self {
+            gl,
             event_loop,
             window,
-            renderer,
+            render_pipeline,
             context: RuntimeContext {},
             swap_buffers: Box::new(swap_buffers),
-            event_handers: cfg.events
+            event_handers: cfg.events,
         }
     }
 
@@ -82,6 +117,8 @@ impl Runtime {
         let swap = self.swap_buffers;
 
         let on_update = self.event_handers.on_update;
+
+        let mut scene = SceneInstance::create();
 
         self.event_loop
             .run(move |event, target| {
@@ -95,7 +132,7 @@ impl Runtime {
                     Event::AboutToWait => {
                         on_update(&mut self.context);
 
-                        self.renderer.render_frame();
+                        self.render_pipeline.render_scene(&self.gl, Some(&mut scene));
                         (swap)()
                     }
                     _ => {}

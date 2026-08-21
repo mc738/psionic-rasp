@@ -1,16 +1,11 @@
-pub mod renderer;
+pub mod rendering;
+pub mod maths;
+pub mod content;
+pub mod render_pipeline;
+pub mod scenes;
 
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+enum VertexAttribute {
+    Float(f32),
+    
 }

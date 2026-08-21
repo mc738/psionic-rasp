@@ -1,0 +1,9 @@
+[package]
+name = "psionic-utils"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+psionic-engine = { path = "../psionic-engine" }
+
+glow = "0.13"
