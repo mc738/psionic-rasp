@@ -1,6 +1,10 @@
 ﻿use crate::rendering::traits::Renderable;
 use std::collections::HashMap;
+use glow::Context;
 use uuid::Uuid;
+use crate::rendering::shaders::Shader;
+use crate::rendering::textures::Texture;
+use crate::templates::SceneTemplate;
 
 /// A type used for mapping external ids to internal ones.
 /// An external id will be globally unique (a uuid).
@@ -26,86 +30,82 @@ impl InternalIdMap {
 
 pub mod scene_manager;
 
-pub struct SceneInstance<'a> {
-    renderable_objects: SceneRenderableCollection<'a>,
+pub struct SceneInstance {
+    renderable_objects: Vec<RenderableId>,
 }
 
-pub struct SceneRenderableCollection<'a> {
-    id_map: InternalIdMap,
-    items: Vec<Box<&'a dyn Renderable>>,
+pub struct SceneLoader {
+    template: SceneTemplate
 }
 
-impl<'a> SceneInstance<'a> {
+type RenderableId = u32;
+
+
+impl SceneInstance {
     pub fn create() -> Self {
         Self {
-            renderable_objects: SceneRenderableCollection::new(),
+            renderable_objects: Vec::new(),
         }
     }
 
-    pub fn get_renderable_objects(&self) -> &Vec<Box<&dyn Renderable>> {
-        &self.renderable_objects.items
+    pub fn get_renderable_objects(&self) -> &Vec<RenderableId> {
+        &self.renderable_objects
     }
 
-    pub fn get_renderable_object(&self, internal_id: &u32) -> Option<&Box<&dyn Renderable>> {
-        self.renderable_objects.get_item(internal_id)
+    pub fn get_renderable_object(&self, internal_id: &u32) -> Option<&u32> {
+        self.renderable_objects.get(*internal_id as usize)
     }
 }
 
-impl<'a> SceneRenderableCollection<'a> {
-    pub fn new() -> Self {
+impl SceneLoader {
+    pub fn create(template: SceneTemplate) -> Self {
         Self {
-            id_map: InternalIdMap::new(),
-            items: Vec::<Box<&dyn Renderable>>::new(),
+            template
         }
     }
 
-    pub fn get_internal_id(&self, id: &Uuid) -> Option<u32> {
-        self.id_map.get_internal_id(id)
+    pub fn load_scene(&mut self) {
+        // To load a scene we have to:
+        // 1. Create the scene instance.
+        // 2. Load all required shaders, textures and materials.
+        // 3. Create mapping of external ids to internal ones.
+        // 4. Instantiate all models in the scene.
+        //
+        // This should be done in a self-contained manner and all required results returned.
+        // Then the caller can handle swapping out the current active scene with the new one.
+        // The job of this function is to load a scene and hand it off to something else,
+        // rather than accept a renderer/render pipeline and set it up.
+        // The main reason for this is that the render pipeline might still be in use,
+        // the scene is being preloaded or determinism is important.
+
+
+
     }
 
-    /// Add an item and return it's internal id.
-    /// If the item is all ready add, the id will simply be returned.
-    ///
-    /// # Arguments
-    ///
-    /// * `id`:
-    /// * `item`:
-    ///
-    /// returns: u32
-    ///
-    /// # Examples
-    ///
-    /// ```
-    ///
-    /// ```
-    pub fn add_item(&mut self, id: Uuid, item: &'a mut dyn Renderable) -> u32 {
-        match self.id_map.get_internal_id(&id) {
-            Some(r) => r,
-            None => {
-                let l = self.items.len();
-                let index = l as u32;
-                item.set_internal_id(index);
-                self.items.push(Box::new(item));
-                self.id_map.map.insert(id, index);
-                index
-            }
-        }
+    pub fn set_template(&mut self, template: SceneTemplate) {
+        self.template = template
     }
 
-    pub fn remove_item(&mut self, id: &Uuid) -> Option<Box<&dyn Renderable>> {
-        match self.id_map.get_internal_id(&id) {
-            None => None,
-            Some(r) => {
-                self.id_map.map.remove(&id);
-                Some(self.items.remove(r as usize))
-            }
+    pub fn load_shaders(&self, gl: &Context) -> Vec<Shader> {
+        let mut result : Vec<Shader> = Vec::with_capacity(self.template.shaders.len());
+
+        for x in &self.template.shaders {
+            let shader = Shader::create(gl, &x.fragment_code, &x.vertex_code);
+            result.push(shader)
         }
+
+        result
     }
 
-    pub fn get_item(&self, id: &u32) -> Option<&Box<&dyn Renderable>> {
-        match self.items.len() > *id as usize {
-            false => None,
-            true => Some(self.items.get(*id as usize).unwrap()),
+    pub fn load_textures(&mut self, gl: &Context) -> Vec<Texture> {
+        let mut result : Vec<Texture> = Vec::with_capacity(self.template.textures.len());
+
+        for x in &self.template.textures {
+            let texture = Texture::create(gl, x.data.as_slice(), x.width as i32, x.height as i32);
+            result.push(texture)
         }
+
+        result
     }
+
 }

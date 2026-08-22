@@ -3,7 +3,7 @@ use psionic_engine::render_pipeline::{
     RenderBatch, RenderBatchKey, RenderPipeline, RenderPipelineConfiguration,
     RenderPipelineContext, RenderPipelineStep,
 };
-use psionic_engine::rendering::Renderer;
+use psionic_engine::rendering::{RenderableStore, Renderer};
 use psionic_engine::rendering::traits::Renderable;
 use psionic_engine::scenes::SceneInstance;
 use winit::event_loop::ControlFlow;
@@ -19,9 +19,17 @@ pub mod platform;
 
 pub struct TestRenderStep {}
 
-pub struct RuntimeContext {}
+pub struct RuntimeServices {
+    instiate
+}
+
+pub struct RuntimeContext {
+    pub active_scene: Option<SceneInstance>,
+    renderable_store: RenderableStore,
+}
 
 pub struct RuntimeEventHandlers {
+    on_pre_update: Box<dyn Fn(&mut RuntimeContext)>,
     on_update: Box<dyn Fn(&mut RuntimeContext)>,
 }
 
@@ -47,6 +55,7 @@ impl RuntimeConfigurationBuilder {
     pub fn new() -> Self {
         RuntimeConfigurationBuilder {
             event_handlers: RuntimeEventHandlers {
+                on_pre_update: Box::new(|ctx| ()),
                 on_update: Box::new(|ctx| ()),
             },
         }
@@ -57,6 +66,11 @@ impl RuntimeConfigurationBuilder {
         self
     }
 
+    pub fn with_on_pre_update(mut self, new_fn: Box<dyn Fn(&mut RuntimeContext)>) -> Self {
+        self.event_handlers.on_pre_update = new_fn;
+        self
+    }
+
     pub fn build(self) -> RuntimeConfiguration {
         RuntimeConfiguration {
             events: self.event_handlers,
@@ -64,10 +78,11 @@ impl RuntimeConfigurationBuilder {
     }
 }
 
-fn test_render_step(gl: &Context, scene: &SceneInstance, ctx: &RenderPipelineContext, batch: &RenderBatch, active_shader_id: Option<u32>) {
+fn test_render_step(gl: &Context, scene: &SceneInstance, ctx: &RenderPipelineContext, renderable_store: &RenderableStore, batch: &RenderBatch, active_shader_id: Option<u32>) {
 
     for item in &batch.items {
-        match scene.get_renderable_object(&item.object_internal_id) {
+
+        match renderable_store.get_item(item.object_internal_id) {
             None => {}
             Some(obj) => {
                 obj.bind(gl);
@@ -75,7 +90,7 @@ fn test_render_step(gl: &Context, scene: &SceneInstance, ctx: &RenderPipelineCon
                 // But the does allow this render step a bit more control.
                 // Though it would be better added to the ctx or render.
                 ctx.renderer.bind_model(gl, active_shader_id.unwrap(), &obj.get_transform().get_view_matrix());
-                
+
                 obj.draw(gl,&ctx.renderer);
             }
         }
@@ -101,12 +116,14 @@ impl Runtime {
 
         let render_pipeline = RenderPipeline::create(&gl, renderer_cfg);
 
+        let scene = SceneInstance::create();
+
         Self {
             gl,
             event_loop,
             window,
             render_pipeline,
-            context: RuntimeContext {},
+            context: RuntimeContext { active_scene: Some(scene), renderable_store: RenderableStore::new() },
             swap_buffers: Box::new(swap_buffers),
             event_handers: cfg.events,
         }
@@ -115,9 +132,8 @@ impl Runtime {
     pub fn run(mut self) -> () {
         let swap = self.swap_buffers;
 
+        let on_pre_update = self.event_handers.on_pre_update;
         let on_update = self.event_handers.on_update;
-
-        let mut scene = SceneInstance::create();
 
         self.event_loop
             .run(move |event, target| {
@@ -128,9 +144,10 @@ impl Runtime {
                         ..
                     } => target.exit(),
                     Event::AboutToWait => {
+                        on_pre_update(&mut self.context);
                         on_update(&mut self.context);
 
-                        self.render_pipeline.render_scene(&self.gl, Some(&mut scene));
+                        self.render_pipeline.render_scene(&self.gl, Some(self.context.active_scene.as_mut().unwrap()), &self.context.renderable_store);
                         (swap)()
                     }
                     _ => {}

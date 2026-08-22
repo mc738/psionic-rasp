@@ -1,4 +1,4 @@
-﻿use crate::rendering::Renderer;
+﻿use crate::rendering::{RenderableStore, Renderer};
 use crate::rendering::shaders::Shader;
 use crate::rendering::traits::Renderable;
 use crate::scenes::SceneInstance;
@@ -76,7 +76,7 @@ impl<'a> RenderPipeline {
         // The basics can be set up, cleared and all that.
     }
 
-    pub fn render_scene(&mut self, gl: &Context, scene: Option<&mut SceneInstance<'a>>) {
+    pub fn render_scene(&mut self, gl: &Context, scene: Option<&mut SceneInstance>, renderable_store: &RenderableStore) {
         self.context.renderer.clear(gl);
 
         match scene {
@@ -84,33 +84,41 @@ impl<'a> RenderPipeline {
             Some(scene) => {
                 // Collect and batch up anything that is renderable in the scene.
                 let renderable_objects = scene.get_renderable_objects().iter().for_each(|r| {
-                    let key = RenderBatchKey::new(
-                        r.is_transparent(),
-                        r.get_material_internal_id(),
-                        r.get_object_tag(),
-                    );
+                    match renderable_store.get_item(*r) {
+                        None => {}
+                        Some(item) => {
+                            let key = RenderBatchKey::new(
+                                item.is_transparent(),
+                                item.get_material_internal_id(),
+                                item.get_object_tag(),
+                            );
 
-                    // First check if to be culled or is active.
+                            // First check if to be culled or is active.
 
-                    if !self.context.has_batch(&key) {
-                        self.context.add_batch(
-                            key,
-                            RenderBatch {
-                                is_transparent: r.is_transparent(),
-                                material_internal_id: r.get_material_internal_id(),
-                                object_tag: r.get_object_tag(),
-                                items: vec![],
-                            },
-                        )
+                            if !self.context.has_batch(&key) {
+                                self.context.add_batch(
+                                    key,
+                                    RenderBatch {
+                                        is_transparent: item.is_transparent(),
+                                        material_internal_id: item.get_material_internal_id(),
+                                        object_tag: item.get_object_tag(),
+                                        items: vec![],
+                                    },
+                                )
+                            }
+
+                            self.context.add_to_batch(
+                                &key,
+                                RenderBatchItem {
+                                    object_internal_id: item.get_material_internal_id(),
+                                    distance_to_camera: 1.,
+                                },
+                            );
+                            
+                        }
                     }
-
-                    self.context.add_to_batch(
-                        &key,
-                        RenderBatchItem {
-                            object_internal_id: r.get_material_internal_id(),
-                            distance_to_camera: 1.,
-                        },
-                    );
+                    
+                    
                 });
 
                 // Now render.
@@ -130,7 +138,7 @@ impl<'a> RenderPipeline {
                                 &self.context.project_matrix,
                             );
 
-                            step.run(gl, scene, &self.context, rb, active_shader_id);
+                            step.run(gl, scene, &self.context, rb, &renderable_store, active_shader_id);
                         }
                     }
                 }
@@ -221,7 +229,7 @@ impl RenderBatchKey {
 
 pub struct RenderPipelineStep {
     key: RenderBatchKey,
-    handler: Box<dyn Fn(&Context, &SceneInstance, &RenderPipelineContext, &RenderBatch, Option<u32>)>,
+    handler: Box<dyn Fn(&Context, &SceneInstance, &RenderPipelineContext, &RenderableStore, &RenderBatch, Option<u32>)>,
 }
 
 impl RenderPipelineConfiguration {
@@ -239,7 +247,7 @@ impl RenderPipelineConfiguration {
 impl RenderPipelineStep {
     pub fn new(
         key: RenderBatchKey,
-        handler: Box<dyn Fn(&Context, &SceneInstance, &RenderPipelineContext, &RenderBatch, Option<u32>)>,
+        handler: Box<dyn Fn(&Context, &SceneInstance, &RenderPipelineContext, &RenderableStore, &RenderBatch, Option<u32>)>,
     ) -> Self {
         Self { key, handler }
     }
@@ -250,8 +258,9 @@ impl RenderPipelineStep {
         scene: &SceneInstance,
         context: &RenderPipelineContext,
         batch: &RenderBatch,
+        renderable_store: &RenderableStore,
         active_shader_id: Option<u32>
     ) {
-        (self.handler)(gl, scene, context, batch, active_shader_id);
+        (self.handler)(gl, scene, context, renderable_store, batch, active_shader_id);
     }
 }

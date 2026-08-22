@@ -12,7 +12,7 @@ pub struct Texture {
 }
 
 impl Texture {
-    pub fn create(gl: Context, data: &[u8], width: i32, height: i32) -> Self {
+    pub fn create(gl: &Context, data: &[u8], width: i32, height: i32) -> Self {
         unsafe {
             let texture = gl.create_texture().unwrap();
 
