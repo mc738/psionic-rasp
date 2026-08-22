@@ -113,11 +113,11 @@ impl<'a> RenderPipeline {
                                     distance_to_camera: 1.,
                                 },
                             );
-                            
+
                         }
                     }
-                    
-                    
+
+
                 });
 
                 // Now render.
@@ -243,6 +243,8 @@ impl RenderPipelineConfiguration {
     }
 }
 
+// Removing - The render pipeline will be a lot more "fixed" for this project.
+/*
 impl RenderPipelineStep {
     pub fn new(
         key: RenderBatchKey,
@@ -263,3 +265,4 @@ impl RenderPipelineStep {
         (self.handler)(gl, scene, context, renderable_store, batch, active_shader_id);
     }
 }
+*/
