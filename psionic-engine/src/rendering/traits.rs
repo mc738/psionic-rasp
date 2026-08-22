@@ -15,6 +15,7 @@ pub trait RenderContentProvider {
     fn get_texture_internal_index(id: &Uuid) -> Option<i32>;
 }
 
+/*
 pub trait Renderable {
     fn is_transparent(&self) -> bool;
     fn get_transform(&self) -> &Transform;
@@ -32,3 +33,4 @@ pub trait Renderable {
 
     fn set_internal_id(&mut self, internal_id: u32);
 }
+*/
