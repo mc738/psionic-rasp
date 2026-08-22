@@ -1,0 +1,210 @@
+﻿use crate::maths::Transform;
+use crate::rendering::core::{BufferObject, BufferUsage, IndexBufferObject, PrimitiveType, VertexArrayObject, VertexAttributePointerType, VertexBufferObject};
+use crate::rendering::geometry::{Vertex, VertexAttribute, VertexAttributesLayout};
+use glow::Context;
+use uuid::Uuid;
+// This has a flat structure with ids because in practice the mesh primitives are what actually gets rendered.
+// So this will be iterated over the most. It makes it a bit more annoying to use and manage, but higher level abstracts can handle this.
+// This way it is a lot easier to group of mesh primitives with the same material together.
+//
+// Meshes and mesh primitives also store the id of their parents.
+// This is based on the assumption that (ultimately) that models, meshes and primitives will be added sequentially.
+// However, this should always be the case. Whatever is handling
+
+pub type ModelInternalId = u32;
+pub type MeshInternalId = u32;
+pub type MeshPrimitiveInternalId = u32;
+
+pub struct Model {
+    meshes: Vec<MeshInternalId>,
+    transform: Transform,
+}
+
+pub struct Mesh {
+    pub model_internal_id: ModelInternalId,
+    primitives: Vec<MeshPrimitiveInternalId>,
+    transform: Transform,
+}
+
+pub struct MeshPrimitive {
+    pub model_internal_id: ModelInternalId,
+    pub mesh_internal_id: MeshInternalId,
+    pub material_internal_id: u32,
+    layout: VertexAttributesLayout,
+    transform: Transform,
+    voa: VertexArrayObject,
+}
+
+pub struct ModelBuilder {
+    transform: Transform,
+    meshes: Vec<MeshBuilder>,
+}
+
+pub struct MeshBuilder {
+    transform: Transform,
+    primitives: Vec<MeshPrimitiveBuilder>,
+}
+
+
+impl MeshBuilder {
+    pub fn with_transform(mut self, transform: Transform) -> Self {
+        self.transform = transform;
+        self
+    }
+    
+    pub fn add_primitive(mut self, mesh_primitive_builder: MeshPrimitiveBuilder) -> Self {
+        self.primitives.push(mesh_primitive_builder);
+        self
+    }
+    
+    pub fn with_primitives(mut self, mesh_primitive_builders: Vec<MeshPrimitiveBuilder>) -> Self {
+        self.primitives = mesh_primitive_builders;
+        self
+    }
+    
+    pub fn build(&self, model_internal_id: ModelInternalId, primitives: Vec<MeshPrimitiveInternalId>) -> Mesh {
+        
+        Mesh {
+            model_internal_id,
+            primitives,
+            transform: self.transform.clone(),
+        }
+    }
+}
+
+pub struct MeshPrimitiveBuilder {
+    vertex_layout: VertexAttributesLayout,
+    vertices_data: Vec<f32>,
+    indices: Vec<u32>,
+    transform: Transform,
+    material_id: Uuid
+}
+
+impl MeshPrimitiveBuilder {
+    pub fn with_vertex_layout(mut self, vertex_layout: VertexAttributesLayout) -> Self {
+        self.vertex_layout = vertex_layout;
+        self
+    }
+    
+    pub fn with_transform(mut self, transform: Transform) -> Self {
+        self.transform = transform;
+        self
+    }
+
+    pub fn with_vertices(mut self, vertices: Vec<Vertex>) -> Self {
+        let mut vertices_data: Vec<f32> = Vec::new();
+
+        for vertice in vertices {
+            for attr in vertice.attributes {
+                match attr {
+                    VertexAttribute::Float(f) => vertices_data.push(f),
+                    VertexAttribute::Float2(f2) => {
+                        vertices_data.push(f2.x);
+                        vertices_data.push(f2.y);
+                    }
+                    VertexAttribute::Float3(f3) => {
+                        vertices_data.push(f3.x);
+                        vertices_data.push(f3.y);
+                        vertices_data.push(f3.z);
+                    }
+                    VertexAttribute::Float4(f4) => {
+                        vertices_data.push(f4.x);
+                        vertices_data.push(f4.y);
+                        vertices_data.push(f4.z);
+                        vertices_data.push(f4.w);
+                    }
+                    VertexAttribute::None => {}
+                }
+            }
+        }
+
+        self.vertices_data = vertices_data;
+        self
+    }
+
+    pub fn with_indices(mut self, indices: Vec<u32>) -> Self {
+        self.indices = indices;
+        self
+    }
+
+    pub fn build(
+        &self,
+        gl: &Context,
+        model_internal_id: ModelInternalId,
+        mesh_internal_id: MeshInternalId,
+        material_internal_id: u32,
+    ) -> MeshPrimitive {
+
+        let vertex_buffer = VertexBufferObject::create(gl);
+        vertex_buffer.bind(gl);
+        vertex_buffer.buffer_data(gl, self.vertices_data.as_slice(), BufferUsage::StaticDraw);
+
+        let index_buffer = IndexBufferObject::create(gl);
+        index_buffer.bind(gl);
+        index_buffer.buffer_data(gl, self.indices.as_slice(), BufferUsage::StaticDraw);
+
+        let voa = VertexArrayObject::create(gl, vertex_buffer, index_buffer);
+
+        let mut offset = 0;
+        let mut index = 0;
+
+        let vertex_size = self.vertex_layout.size;
+
+        for attribute in &self.vertex_layout.items {
+            if attribute.active {
+                voa.vertex_attribute(gl, index, attribute.count as i32, VertexAttributePointerType::Float, vertex_size, offset);
+                index = index + 1;
+                offset = offset + attribute.count as i32;
+
+            }
+        }
+        
+        MeshPrimitive {
+            model_internal_id,
+            mesh_internal_id,
+            material_internal_id,
+            // Clone is on purpose here. So the primitive has it's own copy of its layout data, transform etc.
+            // A builder class will be excepted do things like this after all.
+            layout: self.vertex_layout.clone(),
+            transform: self.transform.clone(),
+            voa,
+        }
+    }
+}
+
+pub struct ModelStore {
+    models: Vec<Model>,
+    meshes: Vec<Mesh>,
+    primitives: Vec<MeshPrimitive>,
+}
+
+impl ModelStore {
+    pub fn new() -> Self {
+        Self {
+            models: vec![],
+            meshes: vec![],
+            primitives: vec![],
+        }
+    }
+
+    pub fn add(&mut self, gl: &Context, model_builder: &ModelBuilder) {
+        let next_model_id = self.models.len();
+        let mut primitive_ids = Vec::new();
+        
+        for mesh in &model_builder.meshes {
+            let next_mesh_id = self.meshes.len();
+            
+            for primitive in &mesh.primitives {
+                let next_primitive_id = self.primitives.len();
+                
+                let prim = primitive.build(gl, next_model_id as u32, next_mesh_id as u32, 0);
+                self.primitives.push(prim);
+                primitive_ids.push(next_primitive_id as u32);
+            }
+            
+            let new_mesh = mesh.build(next_model_id as u32, primitive_ids.clone());
+            self.meshes.push(new_mesh);
+            primitive_ids.clear();
+        }
+    }
+}

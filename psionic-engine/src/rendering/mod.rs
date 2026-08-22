@@ -4,7 +4,6 @@ use crate::rendering::shaders::Shader;
 use crate::rendering::textures::Texture;
 use glam::Mat4;
 use glow::{Context, HasContext};
-use crate::rendering::traits::Renderable;
 
 pub mod core;
 pub mod geometry;
@@ -12,6 +11,7 @@ pub mod materials;
 pub mod shaders;
 pub mod textures;
 pub mod traits;
+pub mod models;
 
 pub struct Renderer {
     textures: Vec<Texture>,
@@ -20,8 +20,23 @@ pub struct Renderer {
     active_shader_id: Option<u32>,
 }
 
+pub struct  ModelProvider {
+
+}
+
+pub struct TextProvider {
+
+}
+
+pub struct UIProvider {
+
+}
+
+
 pub struct RenderableStore {
-    items: Vec<Box<dyn Renderable>>
+    models: ModelProvider,
+    text: TextProvider,
+    ui: UIProvider
 }
 
 impl Renderer {
@@ -139,11 +154,35 @@ impl Renderer {
 impl RenderableStore {
     pub fn new() -> Self {
         Self {
-            items: Vec::new()
+            models:  ModelProvider::new(),
+            text: TextProvider::new(),
+            ui: UIProvider::new()
         }
     }
 
-    pub fn get_item(&self, id: u32) -> Option<&Box<dyn Renderable>> {
+    pub fn get_model(&self, id: u32) -> Option<&Model> {
         self.items.get(id as usize)
+    }
+}
+
+impl ModelProvider {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    pub fn add() {
+
+    }
+}
+
+impl TextProvider {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl UIProvider {
+    pub fn new() -> Self {
+        Self {}
     }
 }

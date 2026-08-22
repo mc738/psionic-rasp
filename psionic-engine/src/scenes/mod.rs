@@ -1,5 +1,4 @@
-﻿use crate::rendering::traits::Renderable;
-use std::collections::HashMap;
+﻿use std::collections::HashMap;
 use glow::Context;
 use uuid::Uuid;
 use crate::rendering::shaders::Shader;

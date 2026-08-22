@@ -4,7 +4,7 @@ use crate::maths::{AsFloat2, Float2, Float3, Float4};
 use crate::rendering::core::{BufferObject, VertexArrayObject};
 
 pub enum VertexAttribute {
-    Float,
+    Float(f32),
     Float2(Float2),
     Float3(Float3),
     Float4(Float4),
@@ -13,17 +13,20 @@ pub enum VertexAttribute {
 
 pub struct Vertex {
     // NOTE - currently there is a hard limit of 8 attributes per vertex.
-    attributes: [VertexAttribute; 8],
+    pub attributes: [VertexAttribute; 8],
 }
 
+#[derive(Clone)]
 pub struct VertexAttributesLayout {
-    // NOTE - currently there is a hard limit of 8 attributes per vertex.
-    items: [VertexAttributesLayoutItem; 8],
+    // NOTE - currently there is a hard limit of 8 attributes per vertex.#
+    pub size: i32,
+    pub items: [VertexAttributesLayoutItem; 8],
 }
 
+#[derive(Clone)]
 pub struct VertexAttributesLayoutItem {
-    name: String,
-    size: u32,
+    pub count: u32,
+    pub active: bool
 }
 
 

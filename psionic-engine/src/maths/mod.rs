@@ -18,6 +18,7 @@ pub struct Float4 {
     pub w: f32,
 }
 
+#[derive(Clone)]
 pub struct Transform {
     position: Vec3,
     rotation: Quat,

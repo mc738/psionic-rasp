@@ -94,6 +94,7 @@ impl VertexArrayObject {
         &self,
         gl: &Context,
         index: u32,
+        count: i32,
         pointer_type: VertexAttributePointerType,
         vertex_size: i32,
         offset: i32,
@@ -105,7 +106,7 @@ impl VertexArrayObject {
 
             gl.vertex_attrib_pointer_f32(
                 index,
-                float_size,
+                count,
                 pointer_type.to_u32(),
                 false,
                 vertex_size * float_size,

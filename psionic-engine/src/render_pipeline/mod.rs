@@ -1,6 +1,5 @@
 ﻿use crate::rendering::{RenderableStore, Renderer};
 use crate::rendering::shaders::Shader;
-use crate::rendering::traits::Renderable;
 use crate::scenes::SceneInstance;
 use glam::Mat4;
 use glow::Context;

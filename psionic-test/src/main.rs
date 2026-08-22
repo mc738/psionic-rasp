@@ -108,7 +108,7 @@ fn main() {
     let cfg =
         RuntimeConfigurationBuilder::new()
             .with_on_update(Box::new(| ctx | {
-                
+
 
             })).build();
 
