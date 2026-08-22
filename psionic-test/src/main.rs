@@ -1,16 +1,17 @@
-use psionic_engine::maths::{Float3, Transform};
-use psionic_engine::rendering::core::{BufferObject, BufferUsage, DrawElementType, IndexBufferObject, PrimitiveType, VertexArrayObject, VertexAttributePointerType, VertexBufferObject};
-use psionic_engine::rendering::Renderer;
-use psionic_engine::rendering::traits::Renderable;
-use psionic_runtime::{Runtime, RuntimeConfiguration, RuntimeConfigurationBuilder};
 use glow::Context;
+use psionic_engine::maths::{Float3, Transform};
+use psionic_engine::rendering::core::{
+    BufferUsage, IndexBufferObject, VertexArrayObject, VertexAttributePointerType,
+    VertexBufferObject,
+};
+use psionic_runtime::{Runtime, RuntimeConfigurationBuilder};
 
 pub struct Quad {
     internal_id: u32,
     vertices: [Float3; 4],
     indices: [u32; 6],
     vao: VertexArrayObject,
-    transform: Transform
+    transform: Transform,
 }
 
 pub struct QuadInstance {
@@ -18,19 +19,19 @@ pub struct QuadInstance {
     vertices: [Float3; 4],
     indices: [u32; 6],
     vao: VertexArrayObject,
-    transform: Transform
+    transform: Transform,
 }
 
 impl QuadInstance {
     pub fn instantiate(gl: &Context) -> Self {
+        let vertices = [
+            Float3::new(-5., -5., -5.),
+            Float3::new(5., -5., -5.),
+            Float3::new(5., 5., -5.),
+            Float3::new(-5., 5., -5.),
+        ];
 
-        let vertices =
-            [ Float3::new(-5., -5., -5.),
-                Float3::new(5., -5., -5.),
-                Float3::new(5., 5., -5.),
-                Float3::new(-5., 5., -5.),];
-
-        let mut verts : Vec<f32> = Vec::new();
+        let mut verts: Vec<f32> = Vec::new();
 
         for v in &vertices {
             verts.push(v.x);
@@ -38,8 +39,7 @@ impl QuadInstance {
             verts.push(v.z);
         }
 
-        let indices =
-            [ 0, 1, 2, 2, 3, 0 ];
+        let indices = [0, 1, 2, 2, 3, 0];
 
         let vertex_buffer = VertexBufferObject::create(gl);
         vertex_buffer.bind(gl);
@@ -51,7 +51,7 @@ impl QuadInstance {
 
         let voa = VertexArrayObject::create(gl, vertex_buffer, index_buffer);
 
-        voa.vertex_attribute(gl, 0, VertexAttributePointerType::Float, 3, 0);
+        voa.vertex_attribute(gl, 0, 3, VertexAttributePointerType::Float, 3, 0);
 
         Self {
             internal_id: 0,
@@ -63,6 +63,7 @@ impl QuadInstance {
     }
 }
 
+/*
 impl Renderable for QuadInstance {
     fn is_transparent(&self) -> bool {
         false
@@ -102,16 +103,12 @@ impl Renderable for QuadInstance {
         self.internal_id = internal_id
     }
 }
+*/
 
 fn main() {
-
-    let cfg =
-        RuntimeConfigurationBuilder::new()
-            .with_on_update(Box::new(| ctx | {
-
-
-            })).build();
-
+    let cfg = RuntimeConfigurationBuilder::new()
+        .with_on_update(Box::new(|ctx| {}))
+        .build();
 
     let runtime = Runtime::create(cfg);
 

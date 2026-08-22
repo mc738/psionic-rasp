@@ -1,10 +1,9 @@
 use glow::Context;
 use psionic_engine::render_pipeline::{
-    RenderBatch, RenderBatchKey, RenderPipeline, RenderPipelineConfiguration,
-    RenderPipelineContext, RenderPipelineStep,
+    RenderPipeline, RenderPipelineConfiguration,
+    RenderPipelineContext,
 };
 use psionic_engine::rendering::{RenderableStore, Renderer};
-use psionic_engine::rendering::traits::Renderable;
 use psionic_engine::scenes::SceneInstance;
 use winit::event_loop::ControlFlow;
 use winit::window::Window;
@@ -18,10 +17,6 @@ use psionic_engine::rendering::shaders::Shader;
 pub mod platform;
 
 pub struct TestRenderStep {}
-
-pub struct RuntimeServices {
-    instiate
-}
 
 pub struct RuntimeContext {
     pub active_scene: Option<SceneInstance>,
@@ -78,7 +73,8 @@ impl RuntimeConfigurationBuilder {
     }
 }
 
-fn test_render_step(gl: &Context, scene: &SceneInstance, ctx: &RenderPipelineContext, renderable_store: &RenderableStore, batch: &RenderBatch, active_shader_id: Option<u32>) {
+/*
+fn test_render_step(gl: &Context, scene: &SceneInstance, ctx: &RenderPipelineContext, renderable_store: &RenderableStore, batch: &#RenderBatch, active_shader_id: Option<u32>) {
 
     for item in &batch.items {
 
@@ -97,6 +93,7 @@ fn test_render_step(gl: &Context, scene: &SceneInstance, ctx: &RenderPipelineCon
 
     }
 }
+*/
 
 impl Runtime {
     pub fn create(cfg: RuntimeConfiguration) -> Self {
@@ -107,10 +104,7 @@ impl Runtime {
             .build(&event_loop)
             .unwrap();
 
-        let key = RenderBatchKey::new(false, 0, 0);
-        let render_step = RenderPipelineStep::new(key, Box::new(test_render_step));
-
-        let renderer_cfg = RenderPipelineConfiguration::empty().add_render_step(render_step);
+        let renderer_cfg = RenderPipelineConfiguration { shadows_enabled: true};
         #[cfg(target_os = "windows")]
         let (gl, swap_buffers) = platform::windows_wgl::create_gl_context(&window);
 
@@ -147,7 +141,7 @@ impl Runtime {
                         on_pre_update(&mut self.context);
                         on_update(&mut self.context);
 
-                        self.render_pipeline.render_scene(&self.gl, Some(self.context.active_scene.as_mut().unwrap()), &self.context.renderable_store);
+                        self.render_pipeline.render_scene(&self.gl, self.context.active_scene.as_mut().unwrap(), &self.context.renderable_store);
                         (swap)()
                     }
                     _ => {}

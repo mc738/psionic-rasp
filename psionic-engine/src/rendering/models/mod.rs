@@ -1,5 +1,8 @@
 ﻿use crate::maths::Transform;
-use crate::rendering::core::{BufferObject, BufferUsage, IndexBufferObject, PrimitiveType, VertexArrayObject, VertexAttributePointerType, VertexBufferObject};
+use crate::rendering::core::{
+    BufferUsage, IndexBufferObject, VertexArrayObject, VertexAttributePointerType,
+    VertexBufferObject,
+};
 use crate::rendering::geometry::{Vertex, VertexAttribute, VertexAttributesLayout};
 use glow::Context;
 use uuid::Uuid;
@@ -16,23 +19,27 @@ pub type MeshInternalId = u32;
 pub type MeshPrimitiveInternalId = u32;
 
 pub struct Model {
+    pub internal_id: ModelInternalId,
     meshes: Vec<MeshInternalId>,
     transform: Transform,
 }
 
 pub struct Mesh {
+    pub internal_id: MeshInternalId,
     pub model_internal_id: ModelInternalId,
     primitives: Vec<MeshPrimitiveInternalId>,
     transform: Transform,
 }
 
 pub struct MeshPrimitive {
+    pub internal_id: MeshPrimitiveInternalId,
     pub model_internal_id: ModelInternalId,
     pub mesh_internal_id: MeshInternalId,
     pub material_internal_id: u32,
     layout: VertexAttributesLayout,
-    transform: Transform,
+    pub transform: Transform,
     voa: VertexArrayObject,
+    pub indices_count: i32,
 }
 
 pub struct ModelBuilder {
@@ -45,26 +52,30 @@ pub struct MeshBuilder {
     primitives: Vec<MeshPrimitiveBuilder>,
 }
 
-
 impl MeshBuilder {
     pub fn with_transform(mut self, transform: Transform) -> Self {
         self.transform = transform;
         self
     }
-    
+
     pub fn add_primitive(mut self, mesh_primitive_builder: MeshPrimitiveBuilder) -> Self {
         self.primitives.push(mesh_primitive_builder);
         self
     }
-    
+
     pub fn with_primitives(mut self, mesh_primitive_builders: Vec<MeshPrimitiveBuilder>) -> Self {
         self.primitives = mesh_primitive_builders;
         self
     }
-    
-    pub fn build(&self, model_internal_id: ModelInternalId, primitives: Vec<MeshPrimitiveInternalId>) -> Mesh {
-        
+
+    pub fn build(
+        &self,
+        internal_id: MeshInternalId,
+        model_internal_id: ModelInternalId,
+        primitives: Vec<MeshPrimitiveInternalId>,
+    ) -> Mesh {
         Mesh {
+            internal_id,
             model_internal_id,
             primitives,
             transform: self.transform.clone(),
@@ -77,7 +88,7 @@ pub struct MeshPrimitiveBuilder {
     vertices_data: Vec<f32>,
     indices: Vec<u32>,
     transform: Transform,
-    material_id: Uuid
+    material_id: Uuid,
 }
 
 impl MeshPrimitiveBuilder {
@@ -85,7 +96,7 @@ impl MeshPrimitiveBuilder {
         self.vertex_layout = vertex_layout;
         self
     }
-    
+
     pub fn with_transform(mut self, transform: Transform) -> Self {
         self.transform = transform;
         self
@@ -130,11 +141,11 @@ impl MeshPrimitiveBuilder {
     pub fn build(
         &self,
         gl: &Context,
+        internal_id: MeshPrimitiveInternalId,
         model_internal_id: ModelInternalId,
         mesh_internal_id: MeshInternalId,
         material_internal_id: u32,
     ) -> MeshPrimitive {
-
         let vertex_buffer = VertexBufferObject::create(gl);
         vertex_buffer.bind(gl);
         vertex_buffer.buffer_data(gl, self.vertices_data.as_slice(), BufferUsage::StaticDraw);
@@ -152,14 +163,21 @@ impl MeshPrimitiveBuilder {
 
         for attribute in &self.vertex_layout.items {
             if attribute.active {
-                voa.vertex_attribute(gl, index, attribute.count as i32, VertexAttributePointerType::Float, vertex_size, offset);
+                voa.vertex_attribute(
+                    gl,
+                    index,
+                    attribute.count as i32,
+                    VertexAttributePointerType::Float,
+                    vertex_size,
+                    offset,
+                );
                 index = index + 1;
                 offset = offset + attribute.count as i32;
-
             }
         }
         
         MeshPrimitive {
+            internal_id,
             model_internal_id,
             mesh_internal_id,
             material_internal_id,
@@ -168,6 +186,7 @@ impl MeshPrimitiveBuilder {
             layout: self.vertex_layout.clone(),
             transform: self.transform.clone(),
             voa,
+            indices_count: self.indices.len() as i32
         }
     }
 }
@@ -190,21 +209,48 @@ impl ModelStore {
     pub fn add(&mut self, gl: &Context, model_builder: &ModelBuilder) {
         let next_model_id = self.models.len();
         let mut primitive_ids = Vec::new();
-        
+
         for mesh in &model_builder.meshes {
             let next_mesh_id = self.meshes.len();
-            
+
             for primitive in &mesh.primitives {
                 let next_primitive_id = self.primitives.len();
-                
-                let prim = primitive.build(gl, next_model_id as u32, next_mesh_id as u32, 0);
+
+                let prim = primitive.build(
+                    gl,
+                    next_primitive_id as u32,
+                    next_model_id as u32,
+                    next_mesh_id as u32,
+                    0,
+                );
                 self.primitives.push(prim);
                 primitive_ids.push(next_primitive_id as u32);
             }
-            
-            let new_mesh = mesh.build(next_model_id as u32, primitive_ids.clone());
+
+            let new_mesh = mesh.build(
+                next_mesh_id as u32,
+                next_model_id as u32,
+                primitive_ids.clone(),
+            );
             self.meshes.push(new_mesh);
             primitive_ids.clear();
         }
+
+        // TODO add model.
     }
+
+    pub fn get_primitives(&self) -> &[MeshPrimitive] {
+        self.primitives.as_slice()
+    }
+
+    pub fn get_primitive(&self, id: MeshPrimitiveInternalId) -> Option<&MeshPrimitive> {
+        self.primitives.get(id as usize)
+    }
+}
+
+impl MeshPrimitive {
+    pub fn bind(&self, gl: &Context) {
+        self.voa.bind(gl)
+    }
+    
 }

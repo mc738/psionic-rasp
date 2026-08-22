@@ -4,6 +4,7 @@ use crate::rendering::shaders::Shader;
 use crate::rendering::textures::Texture;
 use glam::Mat4;
 use glow::{Context, HasContext};
+use crate::rendering::models::{MeshPrimitive, MeshPrimitiveInternalId, Model, ModelStore};
 
 pub mod core;
 pub mod geometry;
@@ -20,10 +21,6 @@ pub struct Renderer {
     active_shader_id: Option<u32>,
 }
 
-pub struct  ModelProvider {
-
-}
-
 pub struct TextProvider {
 
 }
@@ -34,7 +31,7 @@ pub struct UIProvider {
 
 
 pub struct RenderableStore {
-    models: ModelProvider,
+    models: ModelStore,
     text: TextProvider,
     ui: UIProvider
 }
@@ -112,7 +109,7 @@ impl Renderer {
     }
 
     pub fn use_material(
-        &self,
+        &mut self,
         gl: &Context,
         material_internal_id: u32,
         view_matrix: &Mat4,
@@ -130,7 +127,7 @@ impl Renderer {
                                 shader.set_uniform_matrix_4_f32(gl, "uView", view_matrix);
                                 shader.set_uniform_matrix_4_f32(gl, "uProjection", project_matrix);
 
-                                //self.active_shader_id = Some(basic_material.shader_internal_id);
+                                self.active_shader_id = Some(basic_material.shader_internal_id);
                                 Some(basic_material.shader_internal_id)
                             }
                         }
@@ -141,37 +138,35 @@ impl Renderer {
         }
     }
 
-    pub fn bind_model(&self, gl: &Context, shader_id: u32, model_matrix: &Mat4) {
-        match self.shaders.get(shader_id as usize) {
+    pub fn bind_model(&self, gl: &Context, model_matrix: &Mat4) {
+        match self.shaders.get(self.active_shader_id.unwrap() as usize) {
             None => (),
             Some(shader) => {
                 shader.set_uniform_matrix_4_f32(gl, "uModel", model_matrix);
             }
         }
     }
+
+    pub fn is_material_transparent(&self, material_id: u32) -> Option<bool> {
+        self.materials.get(material_id as usize).map(|m| { m.is_transparent() })
+    }
 }
 
 impl RenderableStore {
     pub fn new() -> Self {
         Self {
-            models:  ModelProvider::new(),
+            models: ModelStore::new(),
             text: TextProvider::new(),
             ui: UIProvider::new()
         }
     }
 
-    pub fn get_model(&self, id: u32) -> Option<&Model> {
-        self.items.get(id as usize)
-    }
-}
-
-impl ModelProvider {
-    pub fn new() -> Self {
-        Self {}
+    pub fn gather_mesh_primitives(&self) -> &[MeshPrimitive] {
+        self.models.get_primitives()
     }
 
-    pub fn add() {
-
+    pub fn get_mesh_primitive(&self, id: MeshPrimitiveInternalId) -> Option<&MeshPrimitive> {
+        self.models.get_primitive(id)
     }
 }
 

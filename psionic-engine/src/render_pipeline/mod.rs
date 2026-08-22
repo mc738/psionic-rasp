@@ -1,40 +1,42 @@
-﻿use crate::rendering::{RenderableStore, Renderer};
+﻿use crate::rendering::core::{DrawElementType, PrimitiveType};
+use crate::rendering::models::MeshPrimitive;
 use crate::rendering::shaders::Shader;
+use crate::rendering::{RenderableStore, Renderer};
 use crate::scenes::SceneInstance;
 use glam::Mat4;
 use glow::Context;
 use std::collections::HashMap;
+use std::fs::metadata;
 use std::hash::{Hash, Hasher};
 use std::ops::Index;
 
-#[derive(Copy, Clone)]
-pub struct RenderBatchKey {
-    is_transparent: bool,
-    material_internal_id: u32,
-    object_tag: i32,
+pub struct OpaqueRenderBatch {
+    pub material_internal_id: u32,
+    pub items: Vec<RenderBatchItem>,
 }
 
-pub struct RenderBatch {
-    is_transparent: bool,
+pub struct TransparentRenderBatch {
     pub material_internal_id: u32,
-    pub object_tag: i32,
     pub items: Vec<RenderBatchItem>,
 }
 
 pub struct RenderBatchItem {
-    pub object_internal_id: u32,
+    pub mesh_primitive_internal_id: u32,
     pub distance_to_camera: f32,
 }
 
-pub struct RenderPipelineConfiguration {
-    steps: Vec<RenderPipelineStep>,
-}
+pub type MaterialInternalId = u32;
 
 pub struct RenderPipelineContext {
     pub renderer: Renderer,
     pub view_matrix: Mat4,
     pub project_matrix: Mat4,
-    batches: HashMap<RenderBatchKey, RenderBatch>,
+    opaque_primitive_batches: HashMap<MaterialInternalId, OpaqueRenderBatch>,
+    transparent_primitive_batches: HashMap<MaterialInternalId, TransparentRenderBatch>,
+}
+
+pub struct RenderPipelineConfiguration {
+    pub shadows_enabled: bool,
 }
 
 pub struct RenderPipeline {
@@ -62,9 +64,8 @@ impl<'a> RenderPipeline {
         self.context.renderer.add_shader(shader);
     }
 
-    pub fn clear_context(&mut self) {
-        self.context.batches.clear()
-    }
+    /// This currently does nothing.
+    pub fn clear_context(&mut self) {}
 
     pub fn initialize_context_from_scene(&mut self, scene: &SceneInstance) {
         // We can actually initialize the context from a scene.
@@ -75,9 +76,105 @@ impl<'a> RenderPipeline {
         // The basics can be set up, cleared and all that.
     }
 
-    pub fn render_scene(&mut self, gl: &Context, scene: Option<&mut SceneInstance>, renderable_store: &RenderableStore) {
+
+    fn shadow_render_pass(&mut self, gl: &Context, scene: &SceneInstance, renderable_store: &RenderableStore) {
+
+    }
+
+    fn opaque_render_pass(&mut self, gl: &Context, scene: &SceneInstance, renderable_store: &RenderableStore) {
+        for (material_id, batch) in &self.context.opaque_primitive_batches {
+
+            self.context.renderer.use_material(
+                gl,
+                *material_id,
+                &self.context.view_matrix,
+                &self.context.project_matrix,
+            );
+            
+            for item in &batch.items {
+                match renderable_store.get_mesh_primitive(item.mesh_primitive_internal_id) {
+                    None => {}
+                    Some(prim) => {
+                        //prim.
+                        prim.bind(gl);
+                        // A bit ugly with the need to pass in a shader id.
+                        // But the does allow this render step a bit more control.
+                        // Though it would be better added to the ctx or render.
+
+                        // TODO - this would be the point to handle instancing?
+                        self.context.renderer.bind_model(gl, &prim .transform.get_view_matrix());
+
+                        //obj.draw(gl,&self.context.renderer);
+                        self.context.renderer.draw_elements(gl, PrimitiveType::Triangles, DrawElementType::UnsignedInt, prim.indices_count);
+                    }
+                }
+            }
+        }
+    }
+
+
+    fn transparent_render_pass(&mut self, gl: &Context, scene: &SceneInstance, renderable_store: &RenderableStore) {
+
+    }
+
+    fn ui_render_pass(&mut self, gl: &Context, scene: &SceneInstance, renderable_store: &RenderableStore) {
+
+    }
+
+    fn text_render_pass(&mut self, gl: &Context, scene: &SceneInstance, renderable_store: &RenderableStore) {
+
+    }
+
+    fn particles_render_pass(&mut self, gl: &Context, scene: &SceneInstance, renderable_store: &RenderableStore) {
+
+    }
+
+
+    fn post_fx_render_pass(&mut self, gl: &Context, scene: &SceneInstance, renderable_store: &RenderableStore) {
+
+    }
+
+
+    pub fn render_scene(
+        &mut self,
+        gl: &Context,
+        scene: &SceneInstance,
+        renderable_store: &RenderableStore,
+    ) {
         self.context.renderer.clear(gl);
 
+        // Moving to a more fixed order:
+
+        // 1. Prepare
+        self.context.renderer.clear(gl);
+
+        // Gather the modelsMeshPrimitive]
+        let primitives = renderable_store.gather_mesh_primitives();
+
+        for prim in primitives {
+            self.context.add_primitive(prim);
+        }
+
+        // Sort the context.
+        self.shadow_render_pass(gl, scene, renderable_store);
+        self.opaque_render_pass(gl, scene, renderable_store);
+        self.transparent_render_pass(gl, scene, renderable_store);
+        self.ui_render_pass(gl,scene, renderable_store);
+        self.text_render_pass(gl, scene, renderable_store);
+        self.particles_render_pass(gl, scene, renderable_store);
+        self.post_fx_render_pass(gl, scene, renderable_store);
+
+        // 2. Shadow pass (if enabled)
+        // 3. Opaque models
+
+        // 4. Transparent models
+        // 5. UI - todo
+        // 6. Text - todo
+        // 7. Particles - todo
+        // 8. Post fx
+        // 9. Swap buffers
+
+        /*
         match scene {
             None => {}
             Some(scene) => {
@@ -113,11 +210,8 @@ impl<'a> RenderPipeline {
                                     distance_to_camera: 1.,
                                 },
                             );
-
                         }
                     }
-
-
                 });
 
                 // Now render.
@@ -137,23 +231,22 @@ impl<'a> RenderPipeline {
                                 &self.context.project_matrix,
                             );
 
-                            step.run(gl, scene, &self.context, rb, &renderable_store, active_shader_id);
+                            step.run(
+                                gl,
+                                scene,
+                                &self.context,
+                                rb,
+                                &renderable_store,
+                                active_shader_id,
+                            );
                         }
                     }
                 }
             }
         }
+        */
 
         self.context.renderer.render_frame(gl);
-    }
-}
-
-impl RenderBatch {
-    fn add(&mut self, object_internal_id: u32, distance_to_camera: f32) {
-        self.items.push(RenderBatchItem {
-            object_internal_id,
-            distance_to_camera,
-        })
     }
 }
 
@@ -163,74 +256,95 @@ impl RenderPipelineContext {
             renderer: (renderer),
             view_matrix: Default::default(),
             project_matrix: Default::default(),
-            batches: HashMap::new(),
+            opaque_primitive_batches: HashMap::new(),
+            transparent_primitive_batches: HashMap::new(),
         }
     }
 
-    pub fn has_batch(&self, key: &RenderBatchKey) -> bool {
-        self.batches.contains_key(key)
+    fn add_to_opaque_primitive_batches(
+        &mut self,
+        material_internal_id: MaterialInternalId,
+        item: RenderBatchItem,
+    ) {
+        match self.opaque_primitive_batches.get_mut(&material_internal_id) {
+            Some(b) => {
+                b.items.push(item);
+            }
+            None => {
+                self.opaque_primitive_batches.insert(
+                    material_internal_id,
+                    OpaqueRenderBatch {
+                        material_internal_id,
+                        items: vec![item],
+                    },
+                );
+            }
+        };
     }
 
-    pub fn add_batch(&mut self, key: RenderBatchKey, batch: RenderBatch) {
-        self.batches.insert(key, batch);
+    fn add_to_transparent_primitive_batches(
+        &mut self,
+        material_internal_id: MaterialInternalId,
+        item: RenderBatchItem,
+    ) {
+        match self.transparent_primitive_batches.get_mut(&material_internal_id) {
+            Some(b) => {
+                b.items.push(item);
+            }
+            None => {
+                self.transparent_primitive_batches.insert(
+                    material_internal_id,
+                    TransparentRenderBatch {
+                        material_internal_id,
+                        items: vec![item],
+                    },
+                );
+            }
+        };
     }
 
-    pub fn add_to_batch(&mut self, key: &RenderBatchKey, item: RenderBatchItem) {
-        match self.batches.get_mut(key) {
-            None => {}
-            Some(batch) => {
-                batch.items.push(item);
+    pub fn add_primitive(&mut self, primitive: &MeshPrimitive) {
+        match self
+            .renderer
+            .is_material_transparent(primitive.material_internal_id)
+        {
+            None => {
+                // Material no found, so do nothing and eventually log a warning?
+            }
+            Some(is_transparent) => {
+                let rbi = RenderBatchItem {
+                    mesh_primitive_internal_id: primitive.internal_id,
+                    distance_to_camera: 0.0,
+                };
+
+                match is_transparent {
+                    true => self.add_to_opaque_primitive_batches(primitive.material_internal_id, rbi),
+                    false => self.add_to_transparent_primitive_batches(primitive.material_internal_id, rbi),
+                }
             }
         }
     }
 
-    pub fn clear_batch_items(&mut self) {
-        for batch in self.batches.values_mut() {
-            batch.items.clear();
+    pub fn reset(&mut self) {
+        for o in self.opaque_primitive_batches.values_mut() {
+            o.items.clear();
         }
-    }
 
-    pub fn get_batch(&self, key: &RenderBatchKey) -> Option<&RenderBatch> {
-        self.batches.get(key)
-    }
-}
-
-impl Eq for RenderBatchKey {}
-
-impl PartialEq for RenderBatchKey {
-    fn eq(&self, other: &RenderBatchKey) -> bool {
-        self.material_internal_id == other.material_internal_id
-            && self.object_tag == other.object_tag
-            && self.is_transparent == other.is_transparent
-    }
-}
-
-impl Hash for RenderBatchKey {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        let separator = -1;
-        self.is_transparent.hash(state);
-        separator.hash(state);
-        self.material_internal_id.hash(state);
-        separator.hash(state);
-        self.object_tag.hash(state);
-    }
-}
-
-impl RenderBatchKey {
-    pub fn new(is_transparent: bool, material_internal_id: u32, object_tag: i32) -> Self {
-        RenderBatchKey {
-            is_transparent,
-            material_internal_id,
-            object_tag,
+        for t in self.transparent_primitive_batches.values_mut() {
+            t.items.clear();
         }
     }
 }
 
+
+/*
 pub struct RenderPipelineStep {
     key: RenderBatchKey,
     handler: Box<dyn Fn(&Context, &SceneInstance, &RenderPipelineContext, &RenderableStore, &RenderBatch, Option<u32>)>,
 }
+*/
 
+/*
 impl RenderPipelineConfiguration {
     pub fn empty() -> Self {
         Self { steps: vec![] }
@@ -242,7 +356,7 @@ impl RenderPipelineConfiguration {
         self
     }
 }
-
+*/
 // Removing - The render pipeline will be a lot more "fixed" for this project.
 /*
 impl RenderPipelineStep {
