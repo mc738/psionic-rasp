@@ -7,6 +7,7 @@ use psionic_engine::rendering::{RenderableStore, Renderer};
 use psionic_engine::scenes::{ResourcesMap, SceneInstance, SceneLoader};
 use psionic_engine::templates::SceneTemplate;
 use std::mem;
+use raw_window_handle::HasWindowHandle;
 use winit::event_loop::ControlFlow;
 use winit::window::Window;
 use winit::{
@@ -14,6 +15,7 @@ use winit::{
     event_loop::EventLoop,
     window::WindowBuilder,
 };
+use psionic_engine::camera::Camera;
 
 pub mod platform;
 
@@ -44,6 +46,8 @@ pub struct Runtime {
     context: RuntimeContext,
     swap_buffers: Box<dyn Fn()>,
     event_handers: RuntimeEventHandlers,
+    window_width: f32,
+    window_height: f32,
 }
 
 pub struct RuntimeConfigurationBuilder {
@@ -144,6 +148,8 @@ impl Runtime {
             },
             swap_buffers: Box::new(swap_buffers),
             event_handers: cfg.events,
+            window_width: 1280.,
+            window_height: 720.,
         }
     }
 
@@ -197,9 +203,12 @@ impl Runtime {
         }
 
         self.context.resources_map = resource_map;
+        
+        // Build and initialize the main camera.
+        let main_camera = Camera::create(self.window_width, self.window_height);
 
         // Now that everything is loaded, create a new scene instance.
-        let new_scene = self.scene_loader.build_scene_instance();
+        let new_scene = self.scene_loader.build_scene_instance(self.window_width, self.window_height);
 
         let old_scene = mem::replace(&mut self.context.active_scene, new_scene);
 

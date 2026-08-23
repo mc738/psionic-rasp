@@ -7,15 +7,17 @@ use crate::rendering::models::{
 };
 use crate::rendering::shaders::Shader;
 use crate::rendering::textures::Texture;
-use crate::templates::{MaterialTemplate, MeshPrimitiveTemplate, SceneTemplate};
+use crate::templates::{MaterialTemplate, MaterialTemplateType, MeshPrimitiveTemplate, SceneTemplate};
 use glow::Context;
 use std::collections::HashMap;
 use std::mem;
 use uuid::Uuid;
+use crate::camera::Camera;
 
 pub struct SceneInstance {
-    graph: SceneGraph,
-    transforms: TransformsCollection,
+    pub graph: SceneGraph,
+    pub transforms: TransformsCollection,
+    pub main_camera: Camera,
 }
 
 pub struct ResourcesMap {
@@ -73,8 +75,9 @@ pub struct TransformsCollection {
 type RenderableId = u32;
 
 impl SceneInstance {
-    pub fn create(nodes: Vec<SceneGraphNode>, transforms: Vec<Transform>, world_root: Transform) -> Self {
+    pub fn create(nodes: Vec<SceneGraphNode>, transforms: Vec<Transform>, world_root: Transform, main_camera: Camera) -> Self {
         Self {
+            main_camera,
             graph: SceneGraph { nodes },
             transforms: TransformsCollection {
                 root: world_root,
@@ -88,6 +91,7 @@ impl SceneInstance {
     /// It doesn't need to actually be able to do anything.
     pub fn blank() -> Self {
         Self {
+            main_camera: Camera::create(800. ,600.),
             graph: SceneGraph { nodes: vec![] },
             transforms: TransformsCollection::new(),
         }
@@ -122,7 +126,7 @@ impl SceneLoader {
         let mut shader_internal_id = 0;
 
         for x in &self.template.shaders {
-            let shader = Shader::create(gl, &x.fragment_code, &x.vertex_code);
+            let shader = Shader::create(gl, &x.vertex_code, &x.fragment_code);
             shaders.push(shader);
             shaders_map.add(&x.id, shader_internal_id);
             shader_internal_id = shader_internal_id + 1;
@@ -137,13 +141,15 @@ impl SceneLoader {
             texture_internal_id += 1;
         }
 
+        let mut material_internal_id = 0;
+
         for x in &self.template.materials {
-            let material = match x {
-                MaterialTemplate::Basic(bt) => Material::Basic(BasicMaterial {
+            let material = match &x.material_type {
+                MaterialTemplateType::Basic(bt) => Material::Basic(BasicMaterial {
                     shader_internal_id: shaders_map.get_internal_id(&bt.shader_id).unwrap(),
                     is_transparent: bt.is_transparent,
                 }),
-                MaterialTemplate::Unlit(ut) => Material::Unlit(UnlitMaterial {
+                MaterialTemplateType::Unlit(ut) => Material::Unlit(UnlitMaterial {
                     shader_internal_id: 0,
                     texture_internal_id: 0,
                     is_transparent: ut.is_transparent,
@@ -151,6 +157,8 @@ impl SceneLoader {
             };
 
             materials.push(material);
+            materials_map.add(&x.id, material_internal_id);
+            material_internal_id = material_internal_id + 1;
         }
 
         NewRendererResources {
@@ -272,12 +280,12 @@ impl SceneLoader {
         let mut result: Vec<Material> = Vec::with_capacity(self.template.materials.len());
 
         for x in &self.template.materials {
-            let material = match x {
-                MaterialTemplate::Basic(bt) => Material::Basic(BasicMaterial {
+            let material = match &x.material_type {
+                MaterialTemplateType::Basic(bt) => Material::Basic(BasicMaterial {
                     shader_internal_id: 0,
                     is_transparent: bt.is_transparent,
                 }),
-                MaterialTemplate::Unlit(ut) => Material::Unlit(UnlitMaterial {
+                MaterialTemplateType::Unlit(ut) => Material::Unlit(UnlitMaterial {
                     shader_internal_id: 0,
                     texture_internal_id: 0,
                     is_transparent: ut.is_transparent,
@@ -290,9 +298,11 @@ impl SceneLoader {
         result
     }
 
-    pub fn build_scene_instance(&self) -> SceneInstance {
+    pub fn build_scene_instance(&self, display_width: f32, display_height: f32) -> SceneInstance {
         let mut nodes: Vec<SceneGraphNode> = Vec::new();
         let mut transforms: Vec<Transform> = Vec::new();
+        let mut main_camera = Camera::create(display_width, display_height);
+        main_camera.update_basis();
 
         let mut next_transform_id = 0;
 
@@ -311,7 +321,7 @@ impl SceneLoader {
             next_transform_id = next_transform_id + 1;
         }
 
-        SceneInstance::create(nodes, transforms, Transform::default())
+        SceneInstance::create(nodes, transforms, Transform::default(), main_camera)
     }
 }
 

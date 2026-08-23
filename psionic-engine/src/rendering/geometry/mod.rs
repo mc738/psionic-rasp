@@ -13,14 +13,14 @@ pub enum VertexAttribute {
 
 pub struct Vertex {
     // NOTE - currently there is a hard limit of 8 attributes per vertex.
-    pub attributes: [VertexAttribute; 8],
+    pub attributes: Vec<VertexAttribute>,
 }
 
 #[derive(Clone)]
 pub struct VertexAttributesLayout {
     // NOTE - currently there is a hard limit of 8 attributes per vertex.#
     pub size: i32,
-    pub items: [VertexAttributesLayoutItem; 8],
+    pub items: Vec<VertexAttributesLayoutItem>,
 }
 
 #[derive(Clone)]
@@ -61,7 +61,6 @@ pub struct VertexCollection {
     indices: Vec<u32>,
     vertices_data: Vec<f32>
 }
-
 
 impl VertexCollection {
     pub fn new(layout: VertexAttributesLayout, vertices: Vec<Vertex>, indices: Vec<u32>) -> Self {

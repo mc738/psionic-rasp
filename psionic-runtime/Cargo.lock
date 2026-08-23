@@ -740,10 +740,13 @@ dependencies = [
 name = "psionic-runtime"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
+ "glam",
  "glow",
  "khronos-egl",
  "psionic-engine",
  "raw-window-handle",
+ "uuid",
  "windows-sys 0.59.0",
  "winit",
 ]

@@ -171,10 +171,14 @@ impl<'a> RenderPipeline {
         scene: &SceneInstance,
         renderable_store: &RenderableStore,
     ) {
+        // Clear
         self.context.renderer.clear(gl);
 
         // Prepare
-        self.context.renderer.clear(gl);
+        // Set the view and matrix projection.
+        // OPTIMIZATION - Can this be done as a global uniform and only set one??
+        self.context.view_matrix = scene.main_camera.get_view_matrix();
+        self.context.project_matrix = scene.main_camera.get_projection_matrix();
 
         // Gather the primitives for rendering.
         for prim in renderable_store.gather_mesh_primitives() {
@@ -347,10 +351,10 @@ impl RenderPipelineContext {
                 };
 
                 match is_transparent {
-                    true => {
+                    false => {
                         self.add_to_opaque_primitive_batches(primitive.material_internal_id, rbi)
                     }
-                    false => self
+                    true => self
                         .add_to_transparent_primitive_batches(primitive.material_internal_id, rbi),
                 }
             }

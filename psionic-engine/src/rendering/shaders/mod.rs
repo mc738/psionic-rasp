@@ -28,11 +28,14 @@ impl Shader {
             }
 
             let fragment = gl.create_shader(glow::FRAGMENT_SHADER).unwrap();
+            gl.shader_source(fragment, fragment_code);
             gl.compile_shader(fragment);
 
             match gl.get_shader_compile_status(fragment) {
                 true => {}
                 false => {
+                    let error = gl.get_error();
+                    let info_log = gl.get_shader_info_log(fragment);
                     println!(
                         "Failed to compile fragment shader: {}",
                         gl.get_shader_info_log(fragment)

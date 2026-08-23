@@ -8,3 +8,5 @@ psionic-engine = { path = "../psionic-engine" }
 psionic-runtime = { path = "../psionic-runtime" }
 uuid = { version = "1.24.1", features = ["v4"] }
 glow = "0.13"
+glam = "0.33.5"
+bytemuck = "1.25.2"

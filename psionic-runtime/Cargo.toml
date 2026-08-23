@@ -11,3 +11,7 @@ raw-window-handle = "0.6.2"
 glow = "0.13"
 khronos-egl = "4.1"
 windows-sys = { version = "0.59", features = ["Win32_Graphics_Gdi", "Win32_Graphics_OpenGL", "Win32_Foundation", "Win32_System_LibraryLoader"] }
+
+glam = "0.33.5"
+uuid = { version = "1.24.1", features = ["v4"] }
+bytemuck = "1.25.2"
