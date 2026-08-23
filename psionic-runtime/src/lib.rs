@@ -1,4 +1,4 @@
-use glow::Context;
+use glow::{Context, HasContext};
 use psionic_engine::render_pipeline::{
     RenderPipeline, RenderPipelineConfiguration, RenderPipelineContext,
 };
@@ -135,6 +135,10 @@ impl Runtime {
 
         let scene_loader = SceneLoader::create(cfg.main_scene);
 
+        unsafe {
+            gl.viewport(0, 0,1280, 720);
+        }
+        
         Self {
             gl,
             event_loop,
@@ -203,7 +207,7 @@ impl Runtime {
         }
 
         self.context.resources_map = resource_map;
-        
+
         // Build and initialize the main camera.
         let main_camera = Camera::create(self.window_width, self.window_height);
 

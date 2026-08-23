@@ -119,10 +119,9 @@ impl Transform {
     }
 
     pub fn get_view_matrix(&self) -> Mat4 {
-        Mat4::IDENTITY
+        Mat4::from_translation(self.position)
             * Mat4::from_quat(self.rotation)
             * Mat4::from_scale(self.scale)
-            * Mat4::from_translation(self.position)
     }
 }
 

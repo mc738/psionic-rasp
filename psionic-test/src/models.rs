@@ -13,7 +13,7 @@ pub struct QuadModel {}
 impl QuadModel {
     fn vertex_layout() -> VertexAttributesLayout {
         VertexAttributesLayout {
-            size: 0,
+            size: 3,
             items: vec![VertexAttributesLayoutItem {
                 count: 3,
                 active: true,
@@ -24,16 +24,16 @@ impl QuadModel {
     fn vertices() -> Vec<Vertex> {
         vec![
             Vertex {
-                attributes: vec![VertexAttribute::Float3(Float3::new(-5., -5., -5.))],
+                attributes: vec![VertexAttribute::Float3(Float3::new(-1.0, -1.0, 5.0))],
             },
             Vertex {
-                attributes: vec![VertexAttribute::Float3(Float3::new(5., -5., -5.))],
+                attributes: vec![VertexAttribute::Float3(Float3::new( 1.0, -1.0, 5.0))],
             },
             Vertex {
-                attributes: vec![VertexAttribute::Float3(Float3::new(5., 5., -5.))],
+                attributes: vec![VertexAttribute::Float3(Float3::new( 1.0,  1.0, 5.0))],
             },
             Vertex {
-                attributes: vec![VertexAttribute::Float3(Float3::new(-5., 5., -5.))],
+                attributes: vec![VertexAttribute::Float3(Float3::new(-1.0,  1.0, 5.0))],
             },
         ]
     }

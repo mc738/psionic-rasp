@@ -60,7 +60,10 @@ pub struct RenderableStore {
 impl Renderer {
     pub fn new(gl: &Context) -> Self {
         unsafe {
-            gl.clear_color(0.1, 0.2, 0.3, 1.0);
+            gl.clear_color(0.3, 0.3, 0.5, 1.0);
+            gl.disable(glow::DEPTH_TEST);
+            gl.disable(glow::CULL_FACE);
+            gl.viewport(0, 0, 1280, 720);
         }
         Self {
             textures: vec![],
@@ -105,8 +108,13 @@ impl Renderer {
         unsafe { gl.clear(glow::COLOR_BUFFER_BIT) }
     }
 
-    pub fn render_frame(&mut self, gl: &Context) {
-        unsafe { gl.clear(glow::COLOR_BUFFER_BIT) }
+    pub fn test(&mut self, gl: &Context) {
+        unsafe {
+            gl.disable(glow::DEPTH_TEST);
+            gl.disable(glow::CULL_FACE);
+            gl.viewport(0, 0, 1280, 720);
+            gl.clear_color(0.2, 0.2, 0.2, 1.0);
+        }
     }
 
     pub fn draw_elements(
@@ -118,6 +126,9 @@ impl Renderer {
     ) {
         unsafe {
             gl.draw_elements(primitive_type.to_u32(), count, element_type.to_u32(), 0);
+
+            let err = gl.get_error();
+            println!("GL error after draw: 0x{:x}", err);
         }
     }
 
@@ -167,8 +178,8 @@ impl Renderer {
                         None => None,
                         Some(shader) => {
                             shader.use_shader(gl);
-                            shader.set_uniform_matrix_4_f32(gl, "uView", view_matrix);
-                            shader.set_uniform_matrix_4_f32(gl, "uProjection", project_matrix);
+                            //shader.set_uniform_matrix_4_f32(gl, "uView", view_matrix);
+                            //shader.set_uniform_matrix_4_f32(gl, "uProjection", project_matrix);
 
                             self.active_shader_id = Some(basic_material.shader_internal_id);
                             Some(basic_material.shader_internal_id)
@@ -184,7 +195,7 @@ impl Renderer {
         match self.shaders.get(self.active_shader_id.unwrap() as usize) {
             None => (),
             Some(shader) => {
-                shader.set_uniform_matrix_4_f32(gl, "uModel", model_matrix);
+                //shader.set_uniform_matrix_4_f32(gl, "uModel", model_matrix);
             }
         }
     }

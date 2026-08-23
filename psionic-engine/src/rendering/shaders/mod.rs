@@ -75,7 +75,7 @@ impl Shader {
             Self { program }
         }
     }
-
+    
     pub fn free(self, gl: &Context) -> () {
         unsafe {
             gl.delete_program(self.program);
@@ -89,6 +89,8 @@ impl Shader {
             match location {
                 None => {
                     // not found
+                    panic!("ERROR")
+
                 }
                 Some(loc) => {
                     gl.uniform_1_f32(Some(&loc), value);
@@ -105,6 +107,8 @@ impl Shader {
             match location {
                 None => {
                     // not found
+                    panic!("ERROR")
+
                 }
                 Some(loc) => {
                     gl.uniform_2_f32(Some(&loc), value_f2.x, value_f2.y);
@@ -121,6 +125,8 @@ impl Shader {
             match location {
                 None => {
                     // not found
+                    panic!("ERROR")
+
                 }
                 Some(loc) => {
                     gl.uniform_3_f32(Some(&loc), value_f3.x, value_f3.y, value_f3.z);
@@ -137,6 +143,8 @@ impl Shader {
             match location {
                 None => {
                     // not found
+                    panic!("ERROR")
+
                 }
                 Some(loc) => {
                     gl.uniform_4_f32(Some(&loc), value_f4.x, value_f4.y, value_f4.z, value_f4.w);
@@ -152,6 +160,7 @@ impl Shader {
             match location {
                 None => {
                     // not found
+                    panic!("ERROR")
                 }
                 Some(loc) => {
                     gl.uniform_matrix_4_f32_slice(Some(&loc), false, &mat4.to_cols_array());

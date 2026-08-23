@@ -14,6 +14,7 @@ use glow::{
     UNSIGNED_INT_2_10_10_10_REV, UNSIGNED_INT_10F_11F_11F_REV, UNSIGNED_SHORT,
 };
 use uuid::Uuid;
+use crate::rendering::geometry::VertexCollection;
 
 pub struct BufferObject {
     buffer: NativeBuffer,
@@ -86,11 +87,58 @@ impl VertexArrayObject {
             // the second model's VAO will overwrite the first model's buffer state,
             // causing only the last model to render.
             // Rebinding here guarantees each VAO uses its own buffers correctly.
+            self.vertex_buffer.bind(gl);
             self.index_buffer.bind(gl);
         }
     }
 
-    pub fn vertex_attribute(
+    pub fn buffer_data(&self, gl: &Context, vertices_collection: &VertexCollection, usage: BufferUsage) -> () {
+        unsafe {
+            gl.bind_vertex_array(Some(self.vertex_array));
+
+            self.vertex_buffer.bind(gl);
+
+            self.vertex_buffer.buffer_data(
+                gl,
+                vertices_collection.data_as_slice(),
+                &usage
+            );
+
+            self.index_buffer.bind(gl);
+
+            self.index_buffer.buffer_data(
+                gl,
+                vertices_collection.indices_as_slice(),
+                &usage,
+            );
+
+            let mut offset = 0;
+            let mut index = 0;
+
+            let vertex_size = vertices_collection.vertex_size();
+
+            for attribute in vertices_collection.get_layout_items() {
+                if attribute.active {
+                    self.set_vertex_attribute(
+                        gl,
+                        index,
+                        attribute.count as i32,
+                        VertexAttributePointerType::Float,
+                        vertex_size,
+                        offset,
+                    );
+                    index = index + 1;
+                    offset = offset + attribute.count as i32;
+                }
+            }
+
+            gl.bind_vertex_array(None);
+        }
+
+
+    }
+
+    pub fn set_vertex_attribute(
         &self,
         gl: &Context,
         index: u32,
@@ -100,9 +148,15 @@ impl VertexArrayObject {
         offset: i32,
     ) {
         unsafe {
-            let float_size = std::mem::size_of::<f32> as i32;
+            let float_size = std::mem::size_of::<f32>() as i32;
 
-            gl.enable_vertex_array_attrib(self.vertex_array, index);
+            gl.bind_vertex_array(Some(self.vertex_array));
+            self.vertex_buffer.bind(gl);
+            self.index_buffer.bind(gl);
+
+
+            gl.enable_vertex_attrib_array(index);
+
 
             gl.vertex_attrib_pointer_f32(
                 index,
@@ -112,13 +166,24 @@ impl VertexArrayObject {
                 vertex_size * float_size,
                 offset * float_size,
             );
+
+            println!(
+                "attrib {}: count={}, stride={}, offset={}",
+                index,
+                count,
+                vertex_size * float_size,
+                offset * float_size
+            );
+
+            //let attrib = gl.ve get_vertex_attrib(index, glow::VERTEX_ATTRIB_ARRAY_POINTER);
+            //println!("attrib {} pointer = {:?}", index, attrib);
         }
     }
 
     pub fn free(&self, gl: &Context) {
         unsafe {
             self.vertex_buffer.free(gl);
-            self.vertex_buffer.free(gl);
+            self.index_buffer.free(gl);
             gl.delete_vertex_array(self.vertex_array)
         }
     }
@@ -206,7 +271,7 @@ impl VertexBufferObject {
         }
     }
 
-    pub fn buffer_data(&self, gl: &Context, data: &[f32], usage: BufferUsage) -> () {
+    pub fn buffer_data(&self, gl: &Context, data: &[f32], usage: &BufferUsage) -> () {
         unsafe {
             self.bind(gl);
 
@@ -237,7 +302,7 @@ impl IndexBufferObject {
         }
     }
 
-    pub fn buffer_data(&self, gl: &Context, data: &[u32], usage: BufferUsage) -> () {
+    pub fn buffer_data(&self, gl: &Context, data: &[u32], usage: &BufferUsage) -> () {
         unsafe {
             self.bind(gl);
 

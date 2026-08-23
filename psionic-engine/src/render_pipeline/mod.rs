@@ -4,7 +4,7 @@ use crate::rendering::shaders::Shader;
 use crate::rendering::{NewRendererResources, PreviousRendererResources, RenderableStore, Renderer};
 use crate::scenes::{SceneInstance};
 use glam::Mat4;
-use glow::Context;
+use glow::{Context, HasContext};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs::metadata;
@@ -45,7 +45,7 @@ pub struct RenderPipeline {
     config: RenderPipelineConfiguration,
 }
 
-impl<'a> RenderPipeline {
+impl RenderPipeline {
     pub fn create(gl: &Context, cfg: RenderPipelineConfiguration) -> Self {
         Self {
             context: RenderPipelineContext::create(Renderer::new(gl)),
@@ -101,6 +101,10 @@ impl<'a> RenderPipeline {
                 match renderable_store.get_mesh_primitive(item.mesh_primitive_internal_id) {
                     None => {}
                     Some(prim) => {
+                        // println!(
+                        //     "drawing prim: indices_count = {}, material = {}, mesh_id = {}",
+                        //     prim.indices_count, material_id, item.mesh_primitive_internal_id
+                        // );
                         //prim.
                         prim.bind(gl);
                         // A bit ugly with the need to pass in a shader id.
@@ -172,7 +176,16 @@ impl<'a> RenderPipeline {
         renderable_store: &RenderableStore,
     ) {
         // Clear
+
+        unsafe {
+            gl.viewport(0, 0,1280, 720);
+            gl.disable(glow::DEPTH_TEST);
+            gl.disable(glow::CULL_FACE);
+            gl.clear_color(0.2, 0.2, 0.2, 1.0);
+        }
+
         self.context.renderer.clear(gl);
+
 
         // Prepare
         // Set the view and matrix projection.
@@ -196,82 +209,7 @@ impl<'a> RenderPipeline {
         self.particles_render_pass(gl, scene, renderable_store);
         self.post_fx_render_pass(gl, scene, renderable_store);
 
-        // 2. Shadow pass (if enabled)
-        // 3. Opaque models
-
-        /*
-        match scene {
-            None => {}
-            Some(scene) => {
-                // Collect and batch up anything that is renderable in the scene.
-                let renderable_objects = scene.get_renderable_objects().iter().for_each(|r| {
-                    match renderable_store.get_item(*r) {
-                        None => {}
-                        Some(item) => {
-                            let key = RenderBatchKey::new(
-                                item.is_transparent(),
-                                item.get_material_internal_id(),
-                                item.get_object_tag(),
-                            );
-
-                            // First check if to be culled or is active.
-
-                            if !self.context.has_batch(&key) {
-                                self.context.add_batch(
-                                    key,
-                                    RenderBatch {
-                                        is_transparent: item.is_transparent(),
-                                        material_internal_id: item.get_material_internal_id(),
-                                        object_tag: item.get_object_tag(),
-                                        items: vec![],
-                                    },
-                                )
-                            }
-
-                            self.context.add_to_batch(
-                                &key,
-                                RenderBatchItem {
-                                    object_internal_id: item.get_material_internal_id(),
-                                    distance_to_camera: 1.,
-                                },
-                            );
-                        }
-                    }
-                });
-
-                // Now render.
-
-                for step in &self.config.steps {
-                    let batch = &mut self.context.get_batch(&step.key);
-
-                    match batch {
-                        None => {}
-                        Some(rb) => {
-                            //self.context.active_shader_id = None;
-
-                            let active_shader_id = self.context.renderer.use_material(
-                                gl,
-                                rb.material_internal_id,
-                                &self.context.view_matrix,
-                                &self.context.project_matrix,
-                            );
-
-                            step.run(
-                                gl,
-                                scene,
-                                &self.context,
-                                rb,
-                                &renderable_store,
-                                active_shader_id,
-                            );
-                        }
-                    }
-                }
-            }
-        }
-        */
-
-        self.context.renderer.render_frame(gl);
+        //self.context.renderer.render_frame(gl);
     }
 
     pub fn reset_context(&mut self) {
@@ -395,47 +333,3 @@ impl RenderPipelineContext {
         }
     }
 }
-
-/*
-pub struct RenderPipelineStep {
-    key: RenderBatchKey,
-    handler: Box<dyn Fn(&Context, &SceneInstance, &RenderPipelineContext, &RenderableStore, &RenderBatch, Option<u32>)>,
-}
-*/
-
-/*
-impl RenderPipelineConfiguration {
-    pub fn empty() -> Self {
-        Self { steps: vec![] }
-    }
-
-    pub fn add_render_step(mut self, step: RenderPipelineStep) -> Self {
-        self.steps.push(step);
-
-        self
-    }
-}
-*/
-// Removing - The render pipeline will be a lot more "fixed" for this project.
-/*
-impl RenderPipelineStep {
-    pub fn new(
-        key: RenderBatchKey,
-        handler: Box<dyn Fn(&Context, &SceneInstance, &RenderPipelineContext, &RenderableStore, &RenderBatch, Option<u32>)>,
-    ) -> Self {
-        Self { key, handler }
-    }
-
-    pub fn run(
-        &self,
-        gl: &Context,
-        scene: &SceneInstance,
-        context: &RenderPipelineContext,
-        batch: &RenderBatch,
-        renderable_store: &RenderableStore,
-        active_shader_id: Option<u32>
-    ) {
-        (self.handler)(gl, scene, context, renderable_store, batch, active_shader_id);
-    }
-}
-*/
