@@ -1,10 +1,13 @@
 ﻿use crate::rendering::materials::{BasicMaterial, UnlitMaterial};
 use uuid::Uuid;
+use crate::maths::Transform;
+use crate::rendering::geometry::{Vertex, VertexAttributesLayout, VertexCollection};
 
 pub struct SceneTemplate {
     pub shaders: Vec<ShaderTemplate>,
     pub textures: Vec<TextureTemplate>,
     pub materials: Vec<MaterialTemplate>,
+    pub models: Vec<ModelTemplate>,
 }
 
 pub struct ShaderTemplate {
@@ -26,10 +29,33 @@ pub enum MaterialTemplate {
 }
 
 pub struct BasicMaterialTemplate {
-    shader_id: Uuid,
+    pub shader_id: Uuid,
+    pub is_transparent: bool,
 }
 
 pub struct UnlitMaterialTemplate {
-    shader_id: Uuid,
-    texture_id: Uuid,
+    pub shader_id: Uuid,
+    pub texture_id: Uuid,
+    pub is_transparent: bool,
+}
+
+pub struct ModelTemplate {
+    pub id: Uuid,
+    pub meshes: Vec<MeshTemplate>,
+    pub local_transform: Transform,
+    pub world_transform: Transform,
+}
+
+pub struct MeshTemplate {
+    pub id: Uuid,
+    pub primitives: Vec<MeshPrimitiveTemplate>,
+    pub local_transform: Transform
+}
+
+pub struct MeshPrimitiveTemplate {
+    pub id: Uuid,
+    pub vertices: VertexCollection,
+    pub indices: Vec<u32>,
+    pub local_transform: Transform,
+    pub material_id: Uuid,
 }

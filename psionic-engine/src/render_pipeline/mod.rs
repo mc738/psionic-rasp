@@ -1,10 +1,11 @@
 ﻿use crate::rendering::core::{DrawElementType, PrimitiveType};
 use crate::rendering::models::MeshPrimitive;
 use crate::rendering::shaders::Shader;
-use crate::rendering::{RenderableStore, Renderer};
-use crate::scenes::SceneInstance;
+use crate::rendering::{NewRendererResources, PreviousRendererResources, RenderableStore, Renderer};
+use crate::scenes::{SceneInstance};
 use glam::Mat4;
 use glow::Context;
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs::metadata;
 use std::hash::{Hash, Hasher};
@@ -67,30 +68,35 @@ impl<'a> RenderPipeline {
     /// This currently does nothing.
     pub fn clear_context(&mut self) {}
 
-    pub fn initialize_context_from_scene(&mut self, scene: &SceneInstance) {
-        // We can actually initialize the context from a scene.
-
-        // First batch all initial renderable objects
-        // Then create all relevant batches in the context.
-        // Nothing needs to be added, but if scenes stay "relatively" static (i.e. not lots of material and object tag changes)
-        // The basics can be set up, cleared and all that.
+    pub fn swap_renderer_resources(&mut self, scene_render_resources: NewRendererResources) -> PreviousRendererResources {
+        self
+            .context
+            .renderer
+            .swap_renderer_resources(scene_render_resources)
     }
 
-
-    fn shadow_render_pass(&mut self, gl: &Context, scene: &SceneInstance, renderable_store: &RenderableStore) {
-
+    fn shadow_render_pass(
+        &mut self,
+        gl: &Context,
+        scene: &SceneInstance,
+        renderable_store: &RenderableStore,
+    ) {
     }
 
-    fn opaque_render_pass(&mut self, gl: &Context, scene: &SceneInstance, renderable_store: &RenderableStore) {
+    fn opaque_render_pass(
+        &mut self,
+        gl: &Context,
+        scene: &SceneInstance,
+        renderable_store: &RenderableStore,
+    ) {
         for (material_id, batch) in &self.context.opaque_primitive_batches {
-
             self.context.renderer.use_material(
                 gl,
                 *material_id,
                 &self.context.view_matrix,
                 &self.context.project_matrix,
             );
-            
+
             for item in &batch.items {
                 match renderable_store.get_mesh_primitive(item.mesh_primitive_internal_id) {
                     None => {}
@@ -102,38 +108,62 @@ impl<'a> RenderPipeline {
                         // Though it would be better added to the ctx or render.
 
                         // TODO - this would be the point to handle instancing?
-                        self.context.renderer.bind_model(gl, &prim .transform.get_view_matrix());
+                        self.context
+                            .renderer
+                            .bind_model(gl, &prim.local_transform.get_view_matrix());
 
                         //obj.draw(gl,&self.context.renderer);
-                        self.context.renderer.draw_elements(gl, PrimitiveType::Triangles, DrawElementType::UnsignedInt, prim.indices_count);
+                        self.context.renderer.draw_elements(
+                            gl,
+                            PrimitiveType::Triangles,
+                            DrawElementType::UnsignedInt,
+                            prim.indices_count,
+                        );
                     }
                 }
             }
         }
     }
 
-
-    fn transparent_render_pass(&mut self, gl: &Context, scene: &SceneInstance, renderable_store: &RenderableStore) {
-
+    fn transparent_render_pass(
+        &mut self,
+        gl: &Context,
+        scene: &SceneInstance,
+        renderable_store: &RenderableStore,
+    ) {
     }
 
-    fn ui_render_pass(&mut self, gl: &Context, scene: &SceneInstance, renderable_store: &RenderableStore) {
-
+    fn ui_render_pass(
+        &mut self,
+        gl: &Context,
+        scene: &SceneInstance,
+        renderable_store: &RenderableStore,
+    ) {
     }
 
-    fn text_render_pass(&mut self, gl: &Context, scene: &SceneInstance, renderable_store: &RenderableStore) {
-
+    fn text_render_pass(
+        &mut self,
+        gl: &Context,
+        scene: &SceneInstance,
+        renderable_store: &RenderableStore,
+    ) {
     }
 
-    fn particles_render_pass(&mut self, gl: &Context, scene: &SceneInstance, renderable_store: &RenderableStore) {
-
+    fn particles_render_pass(
+        &mut self,
+        gl: &Context,
+        scene: &SceneInstance,
+        renderable_store: &RenderableStore,
+    ) {
     }
 
-
-    fn post_fx_render_pass(&mut self, gl: &Context, scene: &SceneInstance, renderable_store: &RenderableStore) {
-
+    fn post_fx_render_pass(
+        &mut self,
+        gl: &Context,
+        scene: &SceneInstance,
+        renderable_store: &RenderableStore,
+    ) {
     }
-
 
     pub fn render_scene(
         &mut self,
@@ -143,36 +173,27 @@ impl<'a> RenderPipeline {
     ) {
         self.context.renderer.clear(gl);
 
-        // Moving to a more fixed order:
-
-        // 1. Prepare
+        // Prepare
         self.context.renderer.clear(gl);
 
-        // Gather the modelsMeshPrimitive]
-        let primitives = renderable_store.gather_mesh_primitives();
-
-        for prim in primitives {
+        // Gather the primitives for rendering.
+        for prim in renderable_store.gather_mesh_primitives() {
             self.context.add_primitive(prim);
         }
 
-        // Sort the context.
+        // Sort the render batches.
+        self.context.sort();
+
         self.shadow_render_pass(gl, scene, renderable_store);
         self.opaque_render_pass(gl, scene, renderable_store);
         self.transparent_render_pass(gl, scene, renderable_store);
-        self.ui_render_pass(gl,scene, renderable_store);
+        self.ui_render_pass(gl, scene, renderable_store);
         self.text_render_pass(gl, scene, renderable_store);
         self.particles_render_pass(gl, scene, renderable_store);
         self.post_fx_render_pass(gl, scene, renderable_store);
 
         // 2. Shadow pass (if enabled)
         // 3. Opaque models
-
-        // 4. Transparent models
-        // 5. UI - todo
-        // 6. Text - todo
-        // 7. Particles - todo
-        // 8. Post fx
-        // 9. Swap buffers
 
         /*
         match scene {
@@ -248,6 +269,11 @@ impl<'a> RenderPipeline {
 
         self.context.renderer.render_frame(gl);
     }
+
+    pub fn reset_context(&mut self) {
+        // Reset the context after - note this should be moved to a separate function so it can be called after the frame buffers are swapped.
+        self.context.reset();
+    }
 }
 
 impl RenderPipelineContext {
@@ -287,7 +313,10 @@ impl RenderPipelineContext {
         material_internal_id: MaterialInternalId,
         item: RenderBatchItem,
     ) {
-        match self.transparent_primitive_batches.get_mut(&material_internal_id) {
+        match self
+            .transparent_primitive_batches
+            .get_mut(&material_internal_id)
+        {
             Some(b) => {
                 b.items.push(item);
             }
@@ -318,10 +347,37 @@ impl RenderPipelineContext {
                 };
 
                 match is_transparent {
-                    true => self.add_to_opaque_primitive_batches(primitive.material_internal_id, rbi),
-                    false => self.add_to_transparent_primitive_batches(primitive.material_internal_id, rbi),
+                    true => {
+                        self.add_to_opaque_primitive_batches(primitive.material_internal_id, rbi)
+                    }
+                    false => self
+                        .add_to_transparent_primitive_batches(primitive.material_internal_id, rbi),
                 }
             }
+        }
+    }
+
+    pub fn sort(&mut self) {
+        // Opaque are items render from front to back.
+        for b in self.opaque_primitive_batches.values_mut() {
+            b.items.sort_by(|a, b| {
+                if a.distance_to_camera < b.distance_to_camera {
+                    Ordering::Less
+                } else {
+                    Ordering::Greater
+                }
+            })
+        }
+
+        // Transparent items are rendered from back to front.
+        for b in self.transparent_primitive_batches.values_mut() {
+            b.items.sort_by(|a, b| {
+                if b.distance_to_camera < a.distance_to_camera {
+                    Ordering::Less
+                } else {
+                    Ordering::Greater
+                }
+            })
         }
     }
 
@@ -335,7 +391,6 @@ impl RenderPipelineContext {
         }
     }
 }
-
 
 /*
 pub struct RenderPipelineStep {

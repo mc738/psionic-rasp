@@ -73,7 +73,7 @@ impl Shader {
         }
     }
 
-    pub fn free(self, gl: Context) -> () {
+    pub fn free(self, gl: &Context) -> () {
         unsafe {
             gl.delete_program(self.program);
         }

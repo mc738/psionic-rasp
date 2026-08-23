@@ -3,7 +3,8 @@ pub mod maths;
 pub mod content;
 pub mod render_pipeline;
 pub mod scenes;
-mod templates;
+pub mod templates;
+pub mod core;
 
 enum VertexAttribute {
     Float(f32),
