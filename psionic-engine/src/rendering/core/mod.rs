@@ -70,6 +70,12 @@ impl VertexArrayObject {
         unsafe {
             let vertex_array = gl.create_vertex_array().unwrap();
 
+            println!(
+                "VAO created with VBO={:?} IBO={:?}",
+                vertex_buffer.buffer,
+                index_buffer.buffer
+            );
+
             Self {
                 vertex_array,
                 vertex_buffer,
@@ -117,6 +123,22 @@ impl VertexArrayObject {
 
             let vertex_size = vertices_collection.vertex_size();
 
+            let float_size = std::mem::size_of::<f32>() as i32;
+            let vertex_size = vertices_collection.vertex_size(); // 3
+
+            // TODO - uncomment
+            // Hard‑wired position attribute at location 0
+            gl.enable_vertex_attrib_array(0);
+            gl.vertex_attrib_pointer_f32(
+                0,
+                3,                          // vec3 position
+                glow::FLOAT,
+                false,
+                12,   // 3 * 4 = 12
+                0,                          // offset 0
+            );
+
+            /*
             for attribute in vertices_collection.get_layout_items() {
                 if attribute.active {
                     self.set_vertex_attribute(
@@ -131,6 +153,7 @@ impl VertexArrayObject {
                     offset = offset + attribute.count as i32;
                 }
             }
+            */
 
             gl.bind_vertex_array(None);
         }

@@ -10,6 +10,7 @@ use crate::rendering::textures::Texture;
 use glam::Mat4;
 use glow::{Context, HasContext};
 use std::mem;
+use bytemuck::cast_slice;
 
 pub mod core;
 pub mod geometry;
@@ -110,10 +111,45 @@ impl Renderer {
 
     pub fn test(&mut self, gl: &Context) {
         unsafe {
-            gl.disable(glow::DEPTH_TEST);
-            gl.disable(glow::CULL_FACE);
-            gl.viewport(0, 0, 1280, 720);
-            gl.clear_color(0.2, 0.2, 0.2, 1.0);
+            unsafe {
+                // 1. Create a fresh VAO + VBO right here
+                let vao = gl.create_vertex_array().unwrap();
+                let vbo = gl.create_buffer().unwrap();
+
+                gl.bind_vertex_array(Some(vao));
+                gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
+
+                // 2. Upload a simple quad
+                let verts: [f32; 12] = [
+                    -0.5, -0.5, 0.0,
+                    0.5, -0.5, 0.0,
+                    0.5,  0.5, 0.0,
+                    -0.5,  0.5, 0.0,
+                ];
+                gl.buffer_data_u8_slice(
+                    glow::ARRAY_BUFFER,
+                    cast_slice(&verts),
+                    glow::STATIC_DRAW,
+                );
+
+                // 3. Set attrib 0 as position
+                gl.enable_vertex_attrib_array(0);
+                gl.vertex_attrib_pointer_f32(
+                    0,
+                    3,
+                    glow::FLOAT,
+                    false,
+                    3 * std::mem::size_of::<f32>() as i32,
+                    0,
+                );
+
+                // 4. Draw
+                //self.shaders[0].use_shader(gl);
+                gl.disable(glow::DEPTH_TEST);
+                gl.disable(glow::CULL_FACE);
+                gl.bind_vertex_array(Some(vao));
+                gl.draw_arrays(glow::TRIANGLE_FAN, 0, 4);
+            }
         }
     }
 
@@ -178,8 +214,9 @@ impl Renderer {
                         None => None,
                         Some(shader) => {
                             shader.use_shader(gl);
-                            //shader.set_uniform_matrix_4_f32(gl, "uView", view_matrix);
-                            //shader.set_uniform_matrix_4_f32(gl, "uProjection", project_matrix);
+                            // TODO - uncomment.
+                            shader.set_uniform_matrix_4_f32(gl, "uView", view_matrix);
+                            shader.set_uniform_matrix_4_f32(gl, "uProjection", project_matrix);
 
                             self.active_shader_id = Some(basic_material.shader_internal_id);
                             Some(basic_material.shader_internal_id)
@@ -195,7 +232,8 @@ impl Renderer {
         match self.shaders.get(self.active_shader_id.unwrap() as usize) {
             None => (),
             Some(shader) => {
-                //shader.set_uniform_matrix_4_f32(gl, "uModel", model_matrix);
+                // TODO - uncomment
+                shader.set_uniform_matrix_4_f32(gl, "uModel", model_matrix);
             }
         }
     }

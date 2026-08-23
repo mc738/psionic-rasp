@@ -302,6 +302,8 @@ impl SceneLoader {
         let mut nodes: Vec<SceneGraphNode> = Vec::new();
         let mut transforms: Vec<Transform> = Vec::new();
         let mut main_camera = Camera::create(display_width, display_height);
+        //main_camera.yaw = -std::f32::consts::FRAC_PI_2;
+        //main_camera.
         main_camera.update_basis();
 
         let mut next_transform_id = 0;

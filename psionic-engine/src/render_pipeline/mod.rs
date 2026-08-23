@@ -97,6 +97,7 @@ impl RenderPipeline {
                 &self.context.project_matrix,
             );
 
+
             for item in &batch.items {
                 match renderable_store.get_mesh_primitive(item.mesh_primitive_internal_id) {
                     None => {}
@@ -123,9 +124,17 @@ impl RenderPipeline {
                             DrawElementType::UnsignedInt,
                             prim.indices_count,
                         );
+
+                        //self.context.renderer.draw_arrays(
+                        //    gl,
+                        //    PrimitiveType::Triangles,
+                        //    0,
+                        //    3,
+                        //);
                     }
                 }
             }
+
         }
     }
 
@@ -185,6 +194,7 @@ impl RenderPipeline {
         }
 
         self.context.renderer.clear(gl);
+        //self.context.renderer.test(gl);
 
 
         // Prepare
@@ -201,13 +211,13 @@ impl RenderPipeline {
         // Sort the render batches.
         self.context.sort();
 
-        self.shadow_render_pass(gl, scene, renderable_store);
+        //self.shadow_render_pass(gl, scene, renderable_store);
         self.opaque_render_pass(gl, scene, renderable_store);
-        self.transparent_render_pass(gl, scene, renderable_store);
-        self.ui_render_pass(gl, scene, renderable_store);
-        self.text_render_pass(gl, scene, renderable_store);
-        self.particles_render_pass(gl, scene, renderable_store);
-        self.post_fx_render_pass(gl, scene, renderable_store);
+        //self.transparent_render_pass(gl, scene, renderable_store);
+        //self.ui_render_pass(gl, scene, renderable_store);
+        //self.text_render_pass(gl, scene, renderable_store);
+        //self.particles_render_pass(gl, scene, renderable_store);
+        //self.post_fx_render_pass(gl, scene, renderable_store);
 
         //self.context.renderer.render_frame(gl);
     }

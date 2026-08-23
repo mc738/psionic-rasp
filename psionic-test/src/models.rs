@@ -24,16 +24,16 @@ impl QuadModel {
     fn vertices() -> Vec<Vertex> {
         vec![
             Vertex {
-                attributes: vec![VertexAttribute::Float3(Float3::new(-1.0, -1.0, 5.0))],
+                attributes: vec![VertexAttribute::Float3(Float3::new(-100., -5., -100.))],
             },
             Vertex {
-                attributes: vec![VertexAttribute::Float3(Float3::new( 1.0, -1.0, 5.0))],
+                attributes: vec![VertexAttribute::Float3(Float3::new( 100., -5., -100.))],
             },
             Vertex {
-                attributes: vec![VertexAttribute::Float3(Float3::new( 1.0,  1.0, 5.0))],
+                attributes: vec![VertexAttribute::Float3(Float3::new( 100.,  -5., -100.))],
             },
             Vertex {
-                attributes: vec![VertexAttribute::Float3(Float3::new(-1.0,  1.0, 5.0))],
+                attributes: vec![VertexAttribute::Float3(Float3::new(-100.,  -5., 100.))],
             },
         ]
     }

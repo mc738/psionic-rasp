@@ -8,7 +8,7 @@ pub struct Camera {
     up: Vec3,
     forward: Vec3,
     right: Vec3,
-    yaw: f32,
+    pub yaw: f32,
     pitch: f32,
     zoom: f32,
     aspect_ratio: f32,
@@ -38,23 +38,20 @@ impl Camera {
     pub fn get_view_matrix(&self) -> Mat4 {
         glam::camera::rh::view::look_at_mat4(self.position, self.position + self.forward, self.up)
     }
-    
+
     pub fn update_basis(&mut self) {
-        self.forward =
-            Vec3::normalize(
-                Vec3::new(
-                    f32::cos(self.pitch) * f32::sin(self.yaw),
-                    f32::sin(self.pitch),
-                    f32::cos(self.pitch) * f32::cos(self.yaw)
-                )
-            );
+        // Standard FPS camera forward vector
+        self.forward = Vec3::new(
+            self.yaw.cos() * self.pitch.cos(),
+            self.pitch.sin(),
+            self.yaw.sin() * self.pitch.cos(),
+        ).normalize();
 
-        // flip
-
+        // Camera looks down -Z in OpenGL RH
         self.forward = -self.forward;
 
-        self.right = Vec3::normalize(Vec3::cross(self.right, Vec3::Y));
-
-        self.up = Vec3::cross(self.right, self.up);
+        // Recompute right and up properly
+        self.right = Vec3::cross(self.forward, Vec3::Y).normalize();
+        self.up = Vec3::cross(self.right, self.forward).normalize();
     }
 }

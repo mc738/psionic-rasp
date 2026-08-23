@@ -157,7 +157,7 @@ impl MeshPrimitive {
         let voa = VertexArrayObject::create(gl, vertex_buffer, index_buffer);
 
         voa.buffer_data(gl, vertices_collection, BufferUsage::StaticDraw);
-
+        
         MeshPrimitive {
             internal_id: *internal_id,
             model_internal_id: *model_internal_id,

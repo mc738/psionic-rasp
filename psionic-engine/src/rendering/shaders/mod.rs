@@ -75,7 +75,7 @@ impl Shader {
             Self { program }
         }
     }
-    
+
     pub fn free(self, gl: &Context) -> () {
         unsafe {
             gl.delete_program(self.program);
@@ -173,6 +173,9 @@ impl Shader {
     pub fn use_shader(&self, gl: &Context) {
         unsafe {
             gl.use_program(Some(self.program));
+
+            //let e = gl.get_error();
+            //let i = 0;
         }
     }
 
