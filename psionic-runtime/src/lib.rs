@@ -15,9 +15,13 @@ use winit::{
     event_loop::EventLoop,
     window::WindowBuilder,
 };
+use winit::event::ElementState;
+use winit::keyboard::PhysicalKey;
 use psionic_engine::camera::Camera;
+use crate::input::InputManager;
 
 pub mod platform;
+pub mod input;
 
 pub struct TestRenderStep {}
 
@@ -25,6 +29,7 @@ pub struct RuntimeContext {
     pub active_scene: SceneInstance,
     resources_map: ResourcesMap,
     renderable_store: RenderableStore,
+    input_manager: InputManager,
 }
 
 pub struct RuntimeEventHandlers {
@@ -149,6 +154,7 @@ impl Runtime {
                 active_scene: blank_scene,
                 renderable_store: RenderableStore::new(),
                 resources_map: ResourcesMap::blank(),
+                input_manager: InputManager::new()
             },
             swap_buffers: Box::new(swap_buffers),
             event_handers: cfg.events,
@@ -231,10 +237,49 @@ impl Runtime {
             .run(move |event, target| {
                 target.set_control_flow(winit::event_loop::ControlFlow::Poll);
                 match event {
-                    Event::WindowEvent {
-                        event: WindowEvent::CloseRequested,
-                        ..
-                    } => target.exit(),
+                    Event::WindowEvent { event, .. } => {
+                        match event {
+                            WindowEvent::ActivationTokenDone { .. } => {}
+                            WindowEvent::Resized(_) => {}
+                            WindowEvent::Moved(_) => {}
+                            WindowEvent::CloseRequested => target.exit(),
+                            WindowEvent::Destroyed => {}
+                            WindowEvent::DroppedFile(_) => {}
+                            WindowEvent::HoveredFile(_) => {}
+                            WindowEvent::HoveredFileCancelled => {}
+                            WindowEvent::Focused(_) => {}
+                            WindowEvent::KeyboardInput { event: keyboard_event, .. } => {
+                                let key = keyboard_event.physical_key;
+
+                                match key {
+                                    PhysicalKey::Code(kc) => {
+                                        self.context.input_manager.update_keyboard_key_state(&kc, keyboard_event.state.is_pressed())
+                                    }
+                                    PhysicalKey::Unidentified(_) => {
+                                        // Currently there is no handling for unidentified keys.
+                                    }
+                                }
+                            }
+                            WindowEvent::ModifiersChanged(_) => {}
+                            WindowEvent::Ime(_) => {}
+                            WindowEvent::CursorMoved { .. } => {}
+                            WindowEvent::CursorEntered { .. } => {}
+                            WindowEvent::CursorLeft { .. } => {}
+                            WindowEvent::MouseWheel { .. } => {}
+                            WindowEvent::MouseInput { .. } => {}
+                            WindowEvent::TouchpadMagnify { .. } => {}
+                            WindowEvent::SmartMagnify { .. } => {}
+                            WindowEvent::TouchpadRotate { .. } => {}
+                            WindowEvent::TouchpadPressure { .. } => {}
+                            WindowEvent::AxisMotion { .. } => {}
+                            WindowEvent::Touch(_) => {}
+                            WindowEvent::ScaleFactorChanged { .. } => {}
+                            WindowEvent::ThemeChanged(_) => {}
+                            WindowEvent::Occluded(_) => {}
+                            WindowEvent::RedrawRequested => {}
+                        }
+
+                    }
                     Event::AboutToWait => {
                         let now = std::time::Instant::now();
                         let delta = now - last_frame;
@@ -256,6 +301,8 @@ impl Runtime {
 
                         // The buffers have been swapped now, so reset the context.
                         self.render_pipeline.reset_context();
+                        // Reset the input managers frame states.
+                        self.context.input_manager.reset_frame_states();
                     }
                     _ => {}
                 }

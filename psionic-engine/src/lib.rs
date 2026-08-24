@@ -6,6 +6,7 @@ pub mod scenes;
 pub mod templates;
 pub mod core;
 pub mod camera;
+pub mod input;
 
 enum VertexAttribute {
     Float(f32),

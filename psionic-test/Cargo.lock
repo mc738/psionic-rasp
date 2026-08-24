@@ -734,6 +734,7 @@ dependencies = [
  "glam",
  "glow",
  "uuid",
+ "winit",
 ]
 
 [[package]]
