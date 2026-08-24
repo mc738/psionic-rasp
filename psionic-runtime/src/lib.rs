@@ -28,8 +28,8 @@ pub struct RuntimeContext {
 }
 
 pub struct RuntimeEventHandlers {
-    pub on_pre_update: Box<dyn Fn(&mut RuntimeContext)>,
-    pub on_update: Box<dyn Fn(&mut RuntimeContext)>,
+    pub on_pre_update: Box<dyn Fn(&mut RuntimeContext, &f32)>,
+    pub on_update: Box<dyn Fn(&mut RuntimeContext, &f32)>,
 }
 
 pub struct RuntimeConfiguration {
@@ -60,8 +60,8 @@ impl RuntimeConfigurationBuilder {
         RuntimeConfigurationBuilder {
             main_scene: None,
             event_handlers: RuntimeEventHandlers {
-                on_pre_update: Box::new(|ctx| ()),
-                on_update: Box::new(|ctx| ()),
+                on_pre_update: Box::new(|_, _| ()),
+                on_update: Box::new(|_, _| ()),
             },
         }
     }
@@ -71,12 +71,12 @@ impl RuntimeConfigurationBuilder {
         self
     }
 
-    pub fn with_on_update(mut self, new_fn: Box<dyn Fn(&mut RuntimeContext)>) -> Self {
+    pub fn with_on_update(mut self, new_fn: Box<dyn Fn(&mut RuntimeContext, &f32)>) -> Self {
         self.event_handlers.on_update = new_fn;
         self
     }
 
-    pub fn with_on_pre_update(mut self, new_fn: Box<dyn Fn(&mut RuntimeContext)>) -> Self {
+    pub fn with_on_pre_update(mut self, new_fn: Box<dyn Fn(&mut RuntimeContext, &f32)>) -> Self {
         self.event_handlers.on_pre_update = new_fn;
         self
     }
@@ -138,7 +138,7 @@ impl Runtime {
         unsafe {
             gl.viewport(0, 0,1280, 720);
         }
-        
+
         Self {
             gl,
             event_loop,
@@ -225,6 +225,8 @@ impl Runtime {
         // Load the initial scene
         self.load_scene();
 
+        let mut last_frame = std::time::Instant::now();
+
         self.event_loop
             .run(move |event, target| {
                 target.set_control_flow(winit::event_loop::ControlFlow::Poll);
@@ -234,8 +236,14 @@ impl Runtime {
                         ..
                     } => target.exit(),
                     Event::AboutToWait => {
-                        (self.event_handers.on_pre_update)(&mut self.context);
-                        (self.event_handers.on_update)(&mut self.context);
+                        let now = std::time::Instant::now();
+                        let delta = now - last_frame;
+                        last_frame = now;
+
+                        let dt = delta.as_secs_f32();
+
+                        (self.event_handers.on_pre_update)(&mut self.context, &dt);
+                        (self.event_handers.on_update)(&mut self.context, &dt);
 
                         // Commit scene.
 
