@@ -23,6 +23,13 @@ use crate::input::{InputManager, InputMap};
 pub mod platform;
 pub mod input;
 
+
+pub trait Game {
+
+    fn load(&mut self, ctx: &mut RuntimeContext) -> ();
+    fn update(&mut self, ctx: &mut RuntimeContext, dt: &f32) -> ();
+}
+
 pub struct TestRenderStep {}
 
 pub struct RuntimeContext {
@@ -32,44 +39,37 @@ pub struct RuntimeContext {
     pub input_manager: InputManager,
 }
 
-pub struct RuntimeEventHandlers {
-    pub on_pre_update: Box<dyn Fn(&mut RuntimeContext, &f32)>,
-    pub on_update: Box<dyn Fn(&mut RuntimeContext, &f32)>,
-}
 
 pub struct RuntimeConfiguration {
     main_scene: SceneTemplate,
-    events: RuntimeEventHandlers,
+    game: Box<dyn Game>,
     input_map: InputMap,
 }
 
 pub struct Runtime {
     gl: Context,
+    game: Box<dyn Game>,
     event_loop: EventLoop<()>,
     window: Window,
     render_pipeline: RenderPipeline,
     scene_loader: SceneLoader,
     context: RuntimeContext,
     swap_buffers: Box<dyn Fn()>,
-    event_handers: RuntimeEventHandlers,
     window_width: f32,
     window_height: f32,
 }
 
 pub struct RuntimeConfigurationBuilder {
     main_scene: Option<SceneTemplate>,
+    game: Option<Box<dyn Game>>,
     input_map: Option<InputMap>,
-    event_handlers: RuntimeEventHandlers,
 }
 
 impl RuntimeConfigurationBuilder {
     pub fn new() -> Self {
         RuntimeConfigurationBuilder {
             main_scene: None,
-            event_handlers: RuntimeEventHandlers {
-                on_pre_update: Box::new(|_, _| ()),
-                on_update: Box::new(|_, _| ()),
-            },
+            game: None,
             input_map: None,
         }
     }
@@ -79,13 +79,8 @@ impl RuntimeConfigurationBuilder {
         self
     }
 
-    pub fn with_on_update(mut self, new_fn: Box<dyn Fn(&mut RuntimeContext, &f32)>) -> Self {
-        self.event_handlers.on_update = new_fn;
-        self
-    }
-
-    pub fn with_on_pre_update(mut self, new_fn: Box<dyn Fn(&mut RuntimeContext, &f32)>) -> Self {
-        self.event_handlers.on_pre_update = new_fn;
+    pub fn with_game(mut self, game: Box<dyn Game>) -> Self {
+        self.game = Some(game);
         self
     }
 
@@ -93,14 +88,14 @@ impl RuntimeConfigurationBuilder {
         self.input_map = Some(input_map);
         self
     }
-    
+
     pub fn build(self) -> RuntimeConfiguration {
         RuntimeConfiguration {
             // This panic could be better, but the runtime config will likely only be made once,
             // defined in code and will fail fast.
             // So it will be noticed is that is missing
             main_scene: self.main_scene.unwrap(),
-            events: self.event_handlers,
+            game: self.game.unwrap(),
             input_map: self.input_map.unwrap(),
         }
     }
@@ -130,13 +125,14 @@ impl Runtime {
         unsafe {
             gl.viewport(0, 0,1280, 720);
         }
-        
+
         let mut input_manager = InputManager::new();
-        
+
         input_manager.load_input_map(&cfg.input_map);
 
         Self {
             gl,
+            game: cfg.game,
             event_loop,
             window,
             render_pipeline,
@@ -148,7 +144,6 @@ impl Runtime {
                 input_manager
             },
             swap_buffers: Box::new(swap_buffers),
-            event_handers: cfg.events,
             window_width: 1280.,
             window_height: 720.,
         }
@@ -278,8 +273,10 @@ impl Runtime {
 
                         let dt = delta.as_secs_f32();
 
-                        (self.event_handers.on_pre_update)(&mut self.context, &dt);
-                        (self.event_handers.on_update)(&mut self.context, &dt);
+                        self.game.update(&mut self.context, &dt);
+
+                        //(self.event_handers.on_pre_update)(&mut self.context, &dt);
+                        //(self.event_handers.on_update)(&mut self.context, &dt);
 
                         // Commit scene.
 
