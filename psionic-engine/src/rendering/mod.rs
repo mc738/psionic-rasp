@@ -162,9 +162,6 @@ impl Renderer {
     ) {
         unsafe {
             gl.draw_elements(primitive_type.to_u32(), count, element_type.to_u32(), 0);
-
-            let err = gl.get_error();
-            println!("GL error after draw: 0x{:x}", err);
         }
     }
 

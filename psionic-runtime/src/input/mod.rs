@@ -1,5 +1,4 @@
-﻿pub mod configuration;
-
+﻿
 use std::collections::HashMap;
 use winit::keyboard::KeyCode;
 

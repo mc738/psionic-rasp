@@ -97,28 +97,6 @@ impl RuntimeConfigurationBuilder {
     }
 }
 
-/*
-fn test_render_step(gl: &Context, scene: &SceneInstance, ctx: &RenderPipelineContext, renderable_store: &RenderableStore, batch: &#RenderBatch, active_shader_id: Option<u32>) {
-
-    for item in &batch.items {
-
-        match renderable_store.get_item(item.object_internal_id) {
-            None => {}
-            Some(obj) => {
-                obj.bind(gl);
-                // A bit ugly with the need to pass in a shader id.
-                // But the does allow this render step a bit more control.
-                // Though it would be better added to the ctx or render.
-                ctx.renderer.bind_model(gl, active_shader_id.unwrap(), &obj.get_transform().get_view_matrix());
-
-                obj.draw(gl,&ctx.renderer);
-            }
-        }
-
-    }
-}
-*/
-
 impl Runtime {
     pub fn create(cfg: RuntimeConfiguration) -> Self {
         let event_loop = EventLoop::new().unwrap();
