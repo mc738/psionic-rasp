@@ -20,29 +20,60 @@ use winit::keyboard::KeyCode::KeyC;
 use psionic_runtime::input::{InputMap, KeyboardKeyMapping, KeyboardKeyState};
 
 struct TestGame {
-    
+
 }
 
 impl Game for TestGame {
-    fn load(&mut self, context: &mut RuntimeContext) -> () {
-        
+    fn load(&mut self, ctx: &mut RuntimeContext) -> () {
+
+
     }
 
     fn update(&mut self, ctx: &mut RuntimeContext, dt: &f32) -> () {
+        let mut move_vector = Vec3::ZERO;
+
         match ctx.input_manager.get_keyboard_key_state(KeyCode::KeyW) {
             None => {}
             Some(keyboard_state) => {
-                if keyboard_state.down_this_frame {
-                    println!("W pressed");
-                }
-                else if keyboard_state.up_this_frame {
-                    println!("W released");
-                }
-                else if keyboard_state.is_down {
-                    println!("W held");
+                if keyboard_state.is_down {
+                    move_vector.z = 1.;
                 }
             }
         }
+
+        match ctx.input_manager.get_keyboard_key_state(KeyCode::KeyS) {
+            None => {}
+            Some(keyboard_state) => {
+                if keyboard_state.is_down {
+                    move_vector.z = -1.;
+                }
+            }
+        }
+
+        match ctx.input_manager.get_keyboard_key_state(KeyCode::KeyA) {
+            None => {}
+            Some(keyboard_state) => {
+                if keyboard_state.is_down {
+                    move_vector.x = -1.;
+                }
+            }
+        }
+
+        match ctx.input_manager.get_keyboard_key_state(KeyCode::KeyD) {
+            None => {}
+            Some(keyboard_state) => {
+                if keyboard_state.is_down {
+                    move_vector.x = 1.;
+                }
+            }
+        }
+
+        let speed = 20.;
+
+        ctx.active_scene.main_camera.modify_position(ctx.active_scene.main_camera.forward * move_vector.z * speed * dt);
+        ctx.active_scene.main_camera.modify_position(ctx.active_scene.main_camera.right * move_vector.x * speed * dt);
+        ctx.active_scene.main_camera.modify_position(ctx.active_scene.main_camera.up * move_vector.y * speed * dt);
+
     }
 }
 
@@ -52,10 +83,10 @@ fn main() {
     let material_id = Uuid::new_v4();
 
     let mut vert_code =
-        std::fs::read_to_string("C:\\Users\\mclif\\Projects\\rust\\psionic\\shaders\\test.vert")
+        std::fs::read_to_string("C:\\Users\\mclif\\Projects\\rust\\psionic\\shaders\\debug_plane.vert")
             .unwrap();
     let mut frag_code =
-        std::fs::read_to_string("C:\\Users\\mclif\\Projects\\rust\\psionic\\shaders\\test.frag")
+        std::fs::read_to_string("C:\\Users\\mclif\\Projects\\rust\\psionic\\shaders\\debug_plane.frag")
             .unwrap();
 
     if let Some(stripped) = vert_code.strip_prefix("\u{FEFF}") {
@@ -90,6 +121,18 @@ fn main() {
                 KeyboardKeyMapping {
                     name: "W".to_string(),
                     key_code: KeyCode::KeyW,
+                },
+                KeyboardKeyMapping {
+                    name: "S".to_string(),
+                    key_code: KeyCode::KeyS,
+                },
+                KeyboardKeyMapping {
+                    name: "A".to_string(),
+                    key_code: KeyCode::KeyA,
+                },
+                KeyboardKeyMapping {
+                    name: "D".to_string(),
+                    key_code: KeyCode::KeyD,
                 }
             ],
         })

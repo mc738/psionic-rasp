@@ -217,6 +217,8 @@ impl Runtime {
         // Load the initial scene
         self.load_scene();
 
+        self.game.load(&mut self.context);
+
         let mut last_frame = std::time::Instant::now();
 
         self.event_loop
@@ -275,10 +277,8 @@ impl Runtime {
 
                         self.game.update(&mut self.context, &dt);
 
-                        //(self.event_handers.on_pre_update)(&mut self.context, &dt);
-                        //(self.event_handers.on_update)(&mut self.context, &dt);
-
                         // Commit scene.
+                        self.context.active_scene.commit();
 
                         self.render_pipeline.render_scene(
                             &self.gl,

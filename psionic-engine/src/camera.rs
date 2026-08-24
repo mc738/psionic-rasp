@@ -1,13 +1,14 @@
 ﻿use glam::{Mat4, Vec3};
 
+
 pub struct Camera {
-    near: f32,
-    far: f32,
-    fov: f32,
-    position: Vec3,
-    up: Vec3,
-    forward: Vec3,
-    right: Vec3,
+    pub near: f32,
+    pub far: f32,
+    pub fov: f32,
+    pub position: Vec3,
+    pub up: Vec3,
+    pub forward: Vec3,
+    pub right: Vec3,
     pub yaw: f32,
     pitch: f32,
     zoom: f32,
@@ -53,5 +54,9 @@ impl Camera {
         // Recompute right and up properly
         self.right = Vec3::cross(self.forward, Vec3::Y).normalize();
         self.up = Vec3::cross(self.right, self.forward).normalize();
+    }
+
+    pub fn modify_position(&mut self, position: Vec3) {
+        self.position = self.position + position;
     }
 }

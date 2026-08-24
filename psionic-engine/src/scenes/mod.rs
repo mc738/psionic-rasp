@@ -97,6 +97,13 @@ impl SceneInstance {
         }
     }
 
+    /// Commits the screen for rendering.
+    /// This will update all dirty transforms.
+    pub fn commit(&mut self) {
+        self.main_camera.update_basis();
+
+    }
+
     /// The method currently does nothing.
     /// It exists in case in the future scene instances have some resources that need freeing.
     pub fn free(&self, gl: &Context) {}
