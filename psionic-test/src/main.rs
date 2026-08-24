@@ -15,9 +15,25 @@ use psionic_engine::templates::{
 };
 use psionic_runtime::{Runtime, RuntimeConfigurationBuilder, RuntimeContext};
 use uuid::Uuid;
+use winit::keyboard::KeyCode;
+use winit::keyboard::KeyCode::KeyC;
+use psionic_runtime::input::{InputMap, KeyboardKeyMapping, KeyboardKeyState};
 
 fn on_update(ctx:  &mut RuntimeContext, dt: &f32) {
-    
+    match ctx.input_manager.get_keyboard_key_state(KeyCode::KeyW) {
+        None => {}
+        Some(keyboard_state) => {
+            if keyboard_state.down_this_frame {
+                println!("W pressed");
+            }
+            else if keyboard_state.up_this_frame {
+                println!("W released");
+            }
+            else if keyboard_state.is_down {
+                println!("W held");
+            }
+        }
+    }
 }
 
 fn main() {
@@ -58,6 +74,14 @@ fn main() {
             main_camera_settings: MainCameraSettings::new(Vec3::ZERO, -std::f32::consts::FRAC_PI_2, 0.0),
         })
         .with_on_update(Box::new(on_update))
+        .with_input_map(InputMap {
+            keyboard_key_mappings: vec![
+                KeyboardKeyMapping {
+                    name: "W".to_string(),
+                    key_code: KeyCode::KeyW,
+                }
+            ],
+        })
         .build();
 
     let runtime = Runtime::create(cfg);

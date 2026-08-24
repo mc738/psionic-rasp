@@ -18,7 +18,7 @@ use winit::{
 use winit::event::ElementState;
 use winit::keyboard::PhysicalKey;
 use psionic_engine::camera::Camera;
-use crate::input::InputManager;
+use crate::input::{InputManager, InputMap};
 
 pub mod platform;
 pub mod input;
@@ -29,7 +29,7 @@ pub struct RuntimeContext {
     pub active_scene: SceneInstance,
     resources_map: ResourcesMap,
     renderable_store: RenderableStore,
-    input_manager: InputManager,
+    pub input_manager: InputManager,
 }
 
 pub struct RuntimeEventHandlers {
@@ -40,6 +40,7 @@ pub struct RuntimeEventHandlers {
 pub struct RuntimeConfiguration {
     main_scene: SceneTemplate,
     events: RuntimeEventHandlers,
+    input_map: InputMap,
 }
 
 pub struct Runtime {
@@ -57,6 +58,7 @@ pub struct Runtime {
 
 pub struct RuntimeConfigurationBuilder {
     main_scene: Option<SceneTemplate>,
+    input_map: Option<InputMap>,
     event_handlers: RuntimeEventHandlers,
 }
 
@@ -68,6 +70,7 @@ impl RuntimeConfigurationBuilder {
                 on_pre_update: Box::new(|_, _| ()),
                 on_update: Box::new(|_, _| ()),
             },
+            input_map: None,
         }
     }
 
@@ -86,6 +89,11 @@ impl RuntimeConfigurationBuilder {
         self
     }
 
+    pub fn with_input_map(mut self, input_map: InputMap) -> Self {
+        self.input_map = Some(input_map);
+        self
+    }
+    
     pub fn build(self) -> RuntimeConfiguration {
         RuntimeConfiguration {
             // This panic could be better, but the runtime config will likely only be made once,
@@ -93,6 +101,7 @@ impl RuntimeConfigurationBuilder {
             // So it will be noticed is that is missing
             main_scene: self.main_scene.unwrap(),
             events: self.event_handlers,
+            input_map: self.input_map.unwrap(),
         }
     }
 }
@@ -121,6 +130,10 @@ impl Runtime {
         unsafe {
             gl.viewport(0, 0,1280, 720);
         }
+        
+        let mut input_manager = InputManager::new();
+        
+        input_manager.load_input_map(&cfg.input_map);
 
         Self {
             gl,
@@ -132,7 +145,7 @@ impl Runtime {
                 active_scene: blank_scene,
                 renderable_store: RenderableStore::new(),
                 resources_map: ResourcesMap::blank(),
-                input_manager: InputManager::new()
+                input_manager
             },
             swap_buffers: Box::new(swap_buffers),
             event_handers: cfg.events,

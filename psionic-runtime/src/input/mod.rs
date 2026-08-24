@@ -3,13 +3,12 @@ use std::collections::HashMap;
 use winit::keyboard::KeyCode;
 
 pub struct InputMap {
-    keyboard_key_mappings: Vec<KeyboardKeyMapping>
-
+    pub keyboard_key_mappings: Vec<KeyboardKeyMapping>
 }
 
 pub struct KeyboardKeyMapping {
-    name: String,
-    key_code: KeyCode,
+    pub name: String,
+    pub key_code: KeyCode,
 }
 
 pub struct  InputManager {
@@ -18,10 +17,10 @@ pub struct  InputManager {
 
 
 pub struct KeyboardKeyState {
-    key_code: KeyCode,
-    is_down: bool,
-    down_this_frame: bool,
-    up_this_frame: bool,
+    pub key_code: KeyCode,
+    pub is_down: bool,
+    pub down_this_frame: bool,
+    pub up_this_frame: bool,
 }
 
 impl InputManager {
@@ -32,6 +31,11 @@ impl InputManager {
         }
     }
 
+    
+    pub fn get_keyboard_key_state(&self, key: KeyCode) -> Option<&KeyboardKeyState> {
+        self.keyboard_keys_state.get(&key)
+    }
+    
     pub fn load_input_map(&mut self, input_map: &InputMap) {
         self.keyboard_keys_state.clear();
 
