@@ -1,17 +1,15 @@
-﻿use crate::rendering::core::{DrawElementType, PrimitiveType};
+﻿use crate::maths::Transform;
+use crate::rendering::Renderer;
+use crate::rendering::core::{DrawElementType, PrimitiveType};
+use crate::rendering::geometry::RenderableObject;
+use crate::rendering::materials::Material;
 use crate::rendering::models::MeshPrimitive;
-use crate::rendering::shaders::Shader;
-use crate::rendering::{NewRendererResources, PreviousRendererResources, RenderableStore, Renderer};
-use crate::scenes::{SceneInstance};
+use crate::resources::resource_manager::ResourceManager;
+use crate::scenes::SceneInstance;
 use glam::Mat4;
 use glow::{Context, HasContext};
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::fs::metadata;
-use std::hash::{Hash, Hasher};
-use std::ops::Index;
-use crate::maths::Transform;
-use crate::rendering::geometry::RenderableObject;
 
 pub struct OpaqueRenderBatch {
     pub material_internal_id: u32,
@@ -63,25 +61,25 @@ impl RenderPipeline {
         self.context.project_matrix = projection_matrix
     }
 
-    pub fn add_shader(&mut self, shader: Shader) {
-        self.context.renderer.add_shader(shader);
-    }
+    //pub fn add_shader(&mut self, shader: Shader) {
+    //    self.context.renderer.add_shader(shader);
+    //}
 
     /// This currently does nothing.
     pub fn clear_context(&mut self) {}
 
-    pub fn swap_renderer_resources(&mut self, scene_render_resources: NewRendererResources) -> PreviousRendererResources {
-        self
-            .context
-            .renderer
-            .swap_renderer_resources(scene_render_resources)
-    }
+    //pub fn swap_renderer_resources(&mut self, scene_render_resources: NewRendererResources) -> PreviousRendererResources {
+    //    self
+    //        .context
+    //        .renderer
+    //        .swap_renderer_resources(scene_render_resources)
+    //}
 
     fn shadow_render_pass(
         &mut self,
         gl: &Context,
         scene: &SceneInstance,
-        renderable_store: &RenderableStore,
+        renderable_store: &ResourceManager,
     ) {
     }
 
@@ -89,88 +87,116 @@ impl RenderPipeline {
         &mut self,
         gl: &Context,
         scene: &SceneInstance,
-        renderable_store: &RenderableStore,
+        resource_manager: &ResourceManager,
     ) {
         for (material_id, batch) in &self.context.opaque_primitive_batches {
-            self.context.renderer.use_material(
-                gl,
-                *material_id,
-                &self.context.view_matrix,
-                &self.context.project_matrix,
-            );
+            match resource_manager.get_material(material_id) {
+                None => {}
+                Some(material) => {
+                    let shader_id = match material {
+                        Material::Basic(m) => {
+                            match resource_manager.get_shader(&m.shader_internal_id) {
+                                None => {}
+                                Some(shader) => {
+                                    shader.use_shader(gl);
+                                    shader.set_uniform_matrix_4_f32(
+                                        gl,
+                                        "uView",
+                                        &self.context.view_matrix,
+                                    );
+                                    shader.set_uniform_matrix_4_f32(
+                                        gl,
+                                        "uProjection",
+                                        &self.context.project_matrix,
+                                    );
 
+                                    for item in &batch.items {
+                                        match resource_manager.get_renderable_object(
+                                            &item.renderable_object_internal_id,
+                                        ) {
+                                            None => {}
+                                            Some(obj) => {
+                                                // println!(
+                                                //     "drawing prim: indices_count = {}, material = {}, mesh_id = {}",
+                                                //     prim.indices_count, material_id, item.mesh_primitive_internal_id
+                                                // );
+                                                //prim.
 
-            for item in &batch.items {
-                match renderable_store.get_renderable_object(item.renderable_object_internal_id) {
-                    None => {}
-                    Some(obj) => {
-                        // println!(
-                        //     "drawing prim: indices_count = {}, material = {}, mesh_id = {}",
-                        //     prim.indices_count, material_id, item.mesh_primitive_internal_id
-                        // );
-                        //prim.
+                                                match obj {
+                                                    RenderableObject::Elements(ero) => {
+                                                        ero.bind(gl);
 
-                        match obj {
-                            RenderableObject::Elements(ero) => {
-                                ero.bind(gl);
+                                                        let transform = Transform::default();
 
-                                let transform = Transform::default();
+                                                        shader.set_uniform_matrix_4_f32(
+                                                            gl,
+                                                            "uModel",
+                                                            &transform.get_view_matrix(),
+                                                        );
 
-                                // TODO - get transform
-                                self.context
-                                    .renderer
-                                    .bind_model(gl, &transform.get_view_matrix());
+                                                        self.context.renderer.draw_elements(
+                                                            gl,
+                                                            PrimitiveType::Triangles,
+                                                            DrawElementType::UnsignedInt,
+                                                            ero.indices_count as i32,
+                                                        );
+                                                    }
+                                                    RenderableObject::InstanceElements(iero) => {
+                                                        //iero.bind(gl);
+                                                        //
+                                                        //let instance_count = 0;
+                                                        //
+                                                        //self.context.renderer.draw_elements_instanced(
+                                                        //    gl,
+                                                        //    PrimitiveType::Triangles,
+                                                        //    DrawElementType::UnsignedInt,
+                                                        //    iero.indices_count,
+                                                        //    instance_count
+                                                        //)
+                                                    }
+                                                }
 
-                                self.context.renderer.draw_elements(
-                                    gl,
-                                    PrimitiveType::Triangles,
-                                    DrawElementType::UnsignedInt,
-                                    ero.indices_count as i32,
-                                );
-                            }
-                            RenderableObject::InstanceElements(iero) => {
-                                //iero.bind(gl);
-                                //
-                                //let instance_count = 0;
-                                //
-                                //self.context.renderer.draw_elements_instanced(
-                                //    gl,
-                                //    PrimitiveType::Triangles,
-                                //    DrawElementType::UnsignedInt,
-                                //    iero.indices_count,
-                                //    instance_count
-                                //)
+                                                //obj.bind(gl);
+                                                // A bit ugly with the need to pass in a shader id.
+                                                // But the does allow this render step a bit more control.
+                                                // Though it would be better added to the ctx or render.
+
+                                                // TODO - this would be the point to handle instancing?
+                                                //self.context
+                                                //    .renderer
+                                                //    .bind_model(gl, &prim.local_transform.get_view_matrix());
+
+                                                //obj.draw(gl,&self.context.renderer);
+                                                //self.context.renderer.draw_elements(
+                                                //    gl,
+                                                //    PrimitiveType::Triangles,
+                                                //    DrawElementType::UnsignedInt,
+                                                //    prim.indices_count,
+                                                //);
+
+                                                //self.context.renderer.draw_arrays(
+                                                //    gl,
+                                                //    PrimitiveType::Triangles,
+                                                //    0,
+                                                //    3,
+                                                //);
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
-
-                        //obj.bind(gl);
-                        // A bit ugly with the need to pass in a shader id.
-                        // But the does allow this render step a bit more control.
-                        // Though it would be better added to the ctx or render.
-
-                        // TODO - this would be the point to handle instancing?
-                        //self.context
-                        //    .renderer
-                        //    .bind_model(gl, &prim.local_transform.get_view_matrix());
-
-                        //obj.draw(gl,&self.context.renderer);
-                        //self.context.renderer.draw_elements(
-                        //    gl,
-                        //    PrimitiveType::Triangles,
-                        //    DrawElementType::UnsignedInt,
-                        //    prim.indices_count,
-                        //);
-
-                        //self.context.renderer.draw_arrays(
-                        //    gl,
-                        //    PrimitiveType::Triangles,
-                        //    0,
-                        //    3,
-                        //);
-                    }
+                        Material::Unlit(m) => {}
+                    };
                 }
             }
 
+            //self.context.renderer.use_material(
+            //    gl,
+            //    *material_id,
+            //    &self.context.view_matrix,
+            //    &self.context.project_matrix,
+            //);
         }
     }
 
@@ -178,7 +204,7 @@ impl RenderPipeline {
         &mut self,
         gl: &Context,
         scene: &SceneInstance,
-        renderable_store: &RenderableStore,
+        renderable_store: &ResourceManager,
     ) {
     }
 
@@ -186,7 +212,7 @@ impl RenderPipeline {
         &mut self,
         gl: &Context,
         scene: &SceneInstance,
-        renderable_store: &RenderableStore,
+        renderable_store: &ResourceManager,
     ) {
     }
 
@@ -194,7 +220,7 @@ impl RenderPipeline {
         &mut self,
         gl: &Context,
         scene: &SceneInstance,
-        renderable_store: &RenderableStore,
+        renderable_store: &ResourceManager,
     ) {
     }
 
@@ -202,7 +228,7 @@ impl RenderPipeline {
         &mut self,
         gl: &Context,
         scene: &SceneInstance,
-        renderable_store: &RenderableStore,
+        renderable_store: &ResourceManager,
     ) {
     }
 
@@ -210,7 +236,7 @@ impl RenderPipeline {
         &mut self,
         gl: &Context,
         scene: &SceneInstance,
-        renderable_store: &RenderableStore,
+        renderable_store: &ResourceManager,
     ) {
     }
 
@@ -218,12 +244,12 @@ impl RenderPipeline {
         &mut self,
         gl: &Context,
         scene: &SceneInstance,
-        renderable_store: &RenderableStore,
+        resource_manager: &ResourceManager,
     ) {
         // Clear
 
         unsafe {
-            gl.viewport(0, 0,1280, 720);
+            gl.viewport(0, 0, 1280, 720);
             gl.disable(glow::DEPTH_TEST);
             gl.disable(glow::CULL_FACE);
             gl.clear_color(0.2, 0.2, 0.2, 1.0);
@@ -231,7 +257,6 @@ impl RenderPipeline {
 
         self.context.renderer.clear(gl);
         //self.context.renderer.test(gl);
-
 
         // Prepare
         // Set the view and matrix projection.
@@ -248,7 +273,7 @@ impl RenderPipeline {
         self.context.sort();
 
         //self.shadow_render_pass(gl, scene, renderable_store);
-        self.opaque_render_pass(gl, scene, renderable_store);
+        self.opaque_render_pass(gl, scene, resource_manager);
         //self.transparent_render_pass(gl, scene, renderable_store);
         //self.ui_render_pass(gl, scene, renderable_store);
         //self.text_render_pass(gl, scene, renderable_store);
@@ -319,8 +344,6 @@ impl RenderPipelineContext {
             }
         };
     }
-
-
 
     pub fn add_primitive(&mut self, primitive: &MeshPrimitive) {
         match self

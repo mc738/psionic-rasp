@@ -1,6 +1,8 @@
-﻿use glam::Mat4;
+﻿use crate::maths::{AsFloat2, AsFloat3, AsFloat4};
+use glam::Mat4;
 use glow::{Context, HasContext, NativeProgram};
-use crate::maths::{AsFloat2, AsFloat3, AsFloat4, Float2, Float3, Float4};
+
+pub type ShaderInternalId = u32;
 
 pub struct Shader {
     program: NativeProgram,
@@ -34,8 +36,6 @@ impl Shader {
             match gl.get_shader_compile_status(fragment) {
                 true => {}
                 false => {
-                    let error = gl.get_error();
-                    let info_log = gl.get_shader_info_log(fragment);
                     println!(
                         "Failed to compile fragment shader: {}",
                         gl.get_shader_info_log(fragment)
@@ -90,7 +90,6 @@ impl Shader {
                 None => {
                     // not found
                     panic!("ERROR")
-
                 }
                 Some(loc) => {
                     gl.uniform_1_f32(Some(&loc), value);
@@ -108,7 +107,6 @@ impl Shader {
                 None => {
                     // not found
                     panic!("ERROR")
-
                 }
                 Some(loc) => {
                     gl.uniform_2_f32(Some(&loc), value_f2.x, value_f2.y);
@@ -126,7 +124,6 @@ impl Shader {
                 None => {
                     // not found
                     panic!("ERROR")
-
                 }
                 Some(loc) => {
                     gl.uniform_3_f32(Some(&loc), value_f3.x, value_f3.y, value_f3.z);
@@ -144,7 +141,6 @@ impl Shader {
                 None => {
                     // not found
                     panic!("ERROR")
-
                 }
                 Some(loc) => {
                     gl.uniform_4_f32(Some(&loc), value_f4.x, value_f4.y, value_f4.z, value_f4.w);
@@ -169,7 +165,6 @@ impl Shader {
         }
     }
 
-
     pub fn use_shader(&self, gl: &Context) {
         unsafe {
             gl.use_program(Some(self.program));
@@ -178,5 +173,4 @@ impl Shader {
             //let i = 0;
         }
     }
-
 }

@@ -1,18 +1,9 @@
 ﻿use crate::core::InternalIdMap;
 use crate::rendering::core::{DrawElementType, PrimitiveType};
-use crate::rendering::geometry::RenderableObject;
-use crate::rendering::geometry::RenderableObjectInternalId;
 use crate::rendering::materials::Material;
-use crate::rendering::models::{
-    MeshPrimitive, MeshPrimitiveInternalId, Model, ModelStore, NewModelStoreResources,
-    PreviousModelStoreResources,
-};
 use crate::rendering::shaders::Shader;
 use crate::rendering::textures::Texture;
-use bytemuck::cast_slice;
-use glam::Mat4;
 use glow::{Context, HasContext};
-use std::mem;
 
 pub mod core;
 pub mod geometry;
@@ -23,15 +14,18 @@ pub mod textures;
 pub mod traits;
 
 pub struct Renderer {
-    textures: Vec<Texture>,
-    shaders: Vec<Shader>,
-    materials: Vec<Material>,
-    active_shader_id: Option<u32>,
+    //textures: Vec<Texture>,
+    //shaders: Vec<Shader>,
+    //materials: Vec<Material>,
+    //active_shader_id: Option<u32>,
+    draw_call_count: u32,
 }
 
+/*
 pub struct TextProvider {}
 
 pub struct UIProvider {}
+*/
 
 /// A type representing a new set of renderer resources.
 /// These can be used to swap out the current lot.
@@ -54,12 +48,14 @@ pub struct PreviousRendererResources {
     pub materials: Vec<Material>,
 }
 
+/*
 pub struct RenderableStore {
     renderable_objects: Vec<RenderableObject>,
     //models: ModelStore,
     text: TextProvider,
     ui: UIProvider,
 }
+*/
 
 impl Renderer {
     pub fn new(gl: &Context) -> Self {
@@ -70,13 +66,11 @@ impl Renderer {
             gl.viewport(0, 0, 1280, 720);
         }
         Self {
-            textures: vec![],
-            shaders: vec![],
-            materials: vec![],
-            active_shader_id: None,
+            draw_call_count: 0,
         }
     }
 
+    /*
     pub(crate) fn swap_renderer_resources(
         &mut self,
         new_renderer_resources: NewRendererResources,
@@ -108,10 +102,10 @@ impl Renderer {
         self.textures.push(texture);
     }
 
-    pub fn clear(&mut self, gl: &Context) {
-        unsafe { gl.clear(glow::COLOR_BUFFER_BIT) }
-    }
 
+    */
+
+    /*
     pub fn test(&mut self, gl: &Context) {
         unsafe {
             unsafe {
@@ -147,6 +141,11 @@ impl Renderer {
                 gl.draw_arrays(glow::TRIANGLE_FAN, 0, 4);
             }
         }
+    }
+    */
+
+    pub fn clear(&mut self, gl: &Context) {
+        unsafe { gl.clear(glow::COLOR_BUFFER_BIT) }
     }
 
     pub fn draw_elements(
@@ -192,6 +191,7 @@ impl Renderer {
         }
     }
 
+    /*
     pub fn use_material(
         &mut self,
         gl: &Context,
@@ -220,7 +220,9 @@ impl Renderer {
             },
         }
     }
+    */
 
+    /*
     pub fn bind_model(&self, gl: &Context, model_matrix: &Mat4) {
         match self.shaders.get(self.active_shader_id.unwrap() as usize) {
             None => (),
@@ -230,14 +232,18 @@ impl Renderer {
             }
         }
     }
+    */
 
+    /*
     pub fn is_material_transparent(&self, material_id: u32) -> Option<bool> {
         self.materials
             .get(material_id as usize)
             .map(|m| m.is_transparent())
     }
+    */
 }
 
+/*
 impl RenderableStore {
     pub fn new() -> Self {
         Self {
@@ -286,3 +292,4 @@ impl UIProvider {
         Self {}
     }
 }
+*/

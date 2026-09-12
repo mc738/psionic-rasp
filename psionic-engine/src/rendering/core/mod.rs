@@ -1,20 +1,15 @@
-﻿use crate::maths::{Float2, Float3, Float4};
+﻿use crate::rendering::geometry::VertexCollection;
 use bytemuck::cast_slice;
-use glam::f32::Mat4;
 use glow::{
-    ARRAY_BUFFER, ATOMIC_COUNTER_BUFFER, BYTE, CLAMP_TO_EDGE, COPY_READ_BUFFER, COPY_WRITE_BUFFER,
-    Context, DISPATCH_INDIRECT_BUFFER, DOUBLE, DRAW_INDIRECT_BUFFER, DYNAMIC_DRAW, DYNAMIC_READ,
-    ELEMENT_ARRAY_BUFFER, FIXED, FLOAT, HALF_FLOAT, HasContext, INT, INT_2_10_10_10_REV, LINEAR,
-    LINEAR_MIPMAP_LINEAR, NativeBuffer, NativeProgram, NativeTexture, NativeUniformLocation,
-    NativeVertexArray, PARAMETER_BUFFER, PIXEL_PACK_BUFFER, PIXEL_UNPACK_BUFFER, QUERY_BUFFER,
-    RGBA, SHADER_STORAGE_BUFFER, SHORT, STATIC_COPY, STATIC_DRAW, STATIC_READ, STREAM_COPY,
-    STREAM_DRAW, STREAM_READ, TEXTURE_2D, TEXTURE_BASE_LEVEL, TEXTURE_BUFFER, TEXTURE_MAG_FILTER,
-    TEXTURE_MAX_LEVEL, TEXTURE_MIN_FILTER, TEXTURE_WRAP_S, TEXTURE_WRAP_T, TEXTURE0,
-    TRANSFORM_FEEDBACK_BUFFER, UNIFORM_BUFFER, UNSIGNED_BYTE, UNSIGNED_INT,
-    UNSIGNED_INT_2_10_10_10_REV, UNSIGNED_INT_10F_11F_11F_REV, UNSIGNED_SHORT,
+    ARRAY_BUFFER, ATOMIC_COUNTER_BUFFER, BYTE, COPY_READ_BUFFER, COPY_WRITE_BUFFER, Context,
+    DISPATCH_INDIRECT_BUFFER, DOUBLE, DRAW_INDIRECT_BUFFER, DYNAMIC_DRAW, DYNAMIC_READ,
+    ELEMENT_ARRAY_BUFFER, FIXED, FLOAT, HALF_FLOAT, HasContext, INT, INT_2_10_10_10_REV,
+    NativeBuffer, NativeVertexArray, PARAMETER_BUFFER, PIXEL_PACK_BUFFER, PIXEL_UNPACK_BUFFER,
+    QUERY_BUFFER, SHADER_STORAGE_BUFFER, SHORT, STATIC_COPY, STATIC_DRAW, STATIC_READ, STREAM_COPY,
+    STREAM_DRAW, STREAM_READ, TEXTURE_BUFFER, TRANSFORM_FEEDBACK_BUFFER, UNIFORM_BUFFER,
+    UNSIGNED_BYTE, UNSIGNED_INT, UNSIGNED_INT_2_10_10_10_REV, UNSIGNED_INT_10F_11F_11F_REV,
+    UNSIGNED_SHORT,
 };
-use uuid::Uuid;
-use crate::rendering::geometry::VertexCollection;
 
 pub struct BufferObject {
     buffer: NativeBuffer,
@@ -72,8 +67,7 @@ impl VertexArrayObject {
 
             println!(
                 "VAO created with VBO={:?} IBO={:?}",
-                vertex_buffer.buffer,
-                index_buffer.buffer
+                vertex_buffer.buffer, index_buffer.buffer
             );
 
             Self {
@@ -98,25 +92,24 @@ impl VertexArrayObject {
         }
     }
 
-    pub fn buffer_data(&self, gl: &Context, vertices_collection: &VertexCollection, usage: BufferUsage) -> () {
+    pub fn buffer_data(
+        &self,
+        gl: &Context,
+        vertices_collection: &VertexCollection,
+        usage: BufferUsage,
+    ) -> () {
         unsafe {
             gl.bind_vertex_array(Some(self.vertex_array));
 
             self.vertex_buffer.bind(gl);
 
-            self.vertex_buffer.buffer_data(
-                gl,
-                vertices_collection.data_as_slice(),
-                &usage
-            );
+            self.vertex_buffer
+                .buffer_data(gl, vertices_collection.data_as_slice(), &usage);
 
             self.index_buffer.bind(gl);
 
-            self.index_buffer.buffer_data(
-                gl,
-                vertices_collection.indices_as_slice(),
-                &usage,
-            );
+            self.index_buffer
+                .buffer_data(gl, vertices_collection.indices_as_slice(), &usage);
 
             let mut offset = 0;
             let mut index = 0;
@@ -131,11 +124,11 @@ impl VertexArrayObject {
             gl.enable_vertex_attrib_array(0);
             gl.vertex_attrib_pointer_f32(
                 0,
-                3,                          // vec3 position
+                3, // vec3 position
                 glow::FLOAT,
                 false,
-                12,   // 3 * 4 = 12
-                0,                          // offset 0
+                12, // 3 * 4 = 12
+                0,  // offset 0
             );
 
             /*
@@ -157,8 +150,6 @@ impl VertexArrayObject {
 
             gl.bind_vertex_array(None);
         }
-
-
     }
 
     pub fn set_vertex_attribute(
@@ -177,9 +168,7 @@ impl VertexArrayObject {
             self.vertex_buffer.bind(gl);
             self.index_buffer.bind(gl);
 
-
             gl.enable_vertex_attrib_array(index);
-
 
             gl.vertex_attrib_pointer_f32(
                 index,

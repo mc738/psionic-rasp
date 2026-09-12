@@ -7,6 +7,8 @@ use glow::{
     TEXTURE_WRAP_T, UNSIGNED_BYTE, HasContext
 };
 
+pub type TextureInternalId = u32;
+
 pub struct Texture {
     texture: NativeTexture,
 }

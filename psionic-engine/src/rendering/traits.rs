@@ -1,8 +1,4 @@
-﻿use glam::Mat4;
-use glow::Context;
-use uuid::Uuid;
-use crate::maths::Transform;
-use crate::rendering::Renderer;
+﻿use uuid::Uuid;
 use crate::rendering::shaders::Shader;
 use crate::rendering::textures::Texture;
 

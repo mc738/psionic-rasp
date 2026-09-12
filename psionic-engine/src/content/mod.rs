@@ -1,7 +1,4 @@
-﻿use std::ops::Index;
-use glam::Mat4;
-use glow::{Context, NativeShader};
-use crate::rendering::materials::Material;
+﻿use crate::rendering::materials::Material;
 use crate::rendering::shaders::Shader;
 use crate::rendering::textures::Texture;
 

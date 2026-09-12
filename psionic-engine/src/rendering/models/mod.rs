@@ -1,17 +1,9 @@
 ﻿use crate::core::InternalIdMap;
 use crate::maths::Transform;
 use crate::render_pipeline::MaterialInternalId;
-use crate::rendering::PreviousRendererResources;
-use crate::rendering::core::{
-    BufferUsage, IndexBufferObject, VertexArrayObject, VertexAttributePointerType,
-    VertexBufferObject,
-};
-use crate::rendering::geometry::{
-    Vertex, VertexAttribute, VertexAttributesLayout, VertexCollection,
-};
-use glow::Context;
+
+use crate::rendering::geometry::VertexCollection;
 use std::mem;
-use uuid::Uuid;
 // This has a flat structure with ids because in practice the mesh primitives are what actually gets rendered.
 // So this will be iterated over the most. It makes it a bit more annoying to use and manage, but higher level abstracts can handle this.
 // This way it is a lot easier to group of mesh primitives with the same material together.

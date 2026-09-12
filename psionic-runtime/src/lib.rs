@@ -4,7 +4,7 @@ use psionic_engine::render_pipeline::{
 };
 use psionic_engine::rendering::shaders::Shader;
 use psionic_engine::rendering::{RenderableStore, Renderer};
-use psionic_engine::scenes::{ResourcesMap, SceneInstance, SceneLoader};
+use psionic_engine::scenes::{SceneInstance};
 use psionic_engine::templates::SceneTemplate;
 use std::mem;
 use raw_window_handle::HasWindowHandle;
@@ -18,6 +18,9 @@ use winit::{
 use winit::event::ElementState;
 use winit::keyboard::PhysicalKey;
 use psionic_engine::camera::Camera;
+use psionic_engine::resources::resource_manager::ResourceManager;
+use psionic_engine::resources::resources_map::ResourcesMap;
+use psionic_engine::scenes::scene_loader::SceneLoader;
 use crate::input::{InputManager, InputMap};
 
 pub mod platform;
@@ -34,8 +37,9 @@ pub struct TestRenderStep {}
 
 pub struct RuntimeContext {
     pub active_scene: SceneInstance,
-    resources_map: ResourcesMap,
-    renderable_store: RenderableStore,
+    resource_manager: ResourceManager,
+    //resources_map: ResourcesMap,
+    //renderable_store: RenderableStore,
     pub input_manager: InputManager,
 }
 
@@ -139,8 +143,10 @@ impl Runtime {
             scene_loader,
             context: RuntimeContext {
                 active_scene: blank_scene,
-                renderable_store: RenderableStore::new(),
-                resources_map: ResourcesMap::blank(),
+                resource_manager: ResourceManager::new(),
+                //renderable_store: RenderableStore::new(),
+
+                //resources_map: ResourcesMap::blank(),
                 input_manager
             },
             swap_buffers: Box::new(swap_buffers),
@@ -176,6 +182,7 @@ impl Runtime {
             models_map: models.models_id_map.clone(),
             meshes_map: models.meshes_id_map.clone(),
             mesh_primitives_map: models.primitives_id_map.clone(),
+            renderable_objects_map: (),
         };
 
         let previous_renderer_resources = self
@@ -183,7 +190,8 @@ impl Runtime {
             .swap_renderer_resources(renderer_resources);
         let previous_models = self
             .context
-            .renderable_store
+            .resource_manager
+            //.renderable_store
             .swap_model_store_resources(models);
 
         // No deferrer clear up here (currently at least).

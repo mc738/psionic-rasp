@@ -1,8 +1,7 @@
 ﻿use glam::Vec3;
-use crate::rendering::materials::{BasicMaterial, UnlitMaterial};
 use uuid::Uuid;
 use crate::maths::Transform;
-use crate::rendering::geometry::{Vertex, VertexAttributesLayout, VertexCollection};
+use crate::rendering::geometry::{VertexCollection};
 
 pub struct SceneTemplate {
     pub shaders: Vec<ShaderTemplate>,

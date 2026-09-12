@@ -1,7 +1,7 @@
 ﻿pub mod meshes;
 
 use glow::Context;
-use crate::maths::{AsFloat2, Float2, Float3, Float4};
+use crate::maths::{Float2, Float3, Float4};
 use crate::rendering::core::{BufferObject, BufferUsage, IndexBufferObject, VertexArrayObject, VertexBufferObject};
 use crate::rendering::models::MeshPrimitive;
 
@@ -59,7 +59,6 @@ impl ElementsRenderableObject {
         todo!()
     }
 
-
     pub fn from_mesh_primitive(gl: &Context, primitive: &MeshPrimitive) -> ElementsRenderableObject {
 
         let vertex_buffer = VertexBufferObject::create(gl);
@@ -77,6 +76,13 @@ impl ElementsRenderableObject {
         }
     }
 
+    pub fn bind(&self, gl: &Context) {
+        self.voa.bind(gl)
+    }
+
+    pub fn free(&self, gl: &Context) {
+        self.voa.free(gl);
+    }
 
 }
 
