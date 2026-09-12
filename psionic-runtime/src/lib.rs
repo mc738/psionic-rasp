@@ -153,7 +153,9 @@ impl Runtime {
         let renderer_resources = self.scene_loader.load_scene_render_resources(&self.gl);
         let models = self
             .scene_loader
-            .load_scene_models(&self.gl, &renderer_resources.materials_map);
+            .load_scene_models(&renderer_resources.materials_map);
+
+        // TODO create any renderable objects required from here.
 
         // There is an optimization to be made here.
         // Currently, we are loading the resources then cloning the maps to pass to the scene.

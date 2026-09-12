@@ -10,6 +10,8 @@ use std::collections::HashMap;
 use std::fs::metadata;
 use std::hash::{Hash, Hasher};
 use std::ops::Index;
+use crate::maths::Transform;
+use crate::rendering::geometry::RenderableObject;
 
 pub struct OpaqueRenderBatch {
     pub material_internal_id: u32,
@@ -22,7 +24,7 @@ pub struct TransparentRenderBatch {
 }
 
 pub struct RenderBatchItem {
-    pub mesh_primitive_internal_id: u32,
+    pub renderable_object_internal_id: u32,
     pub distance_to_camera: f32,
 }
 
@@ -99,31 +101,65 @@ impl RenderPipeline {
 
 
             for item in &batch.items {
-                match renderable_store.get_mesh_primitive(item.mesh_primitive_internal_id) {
+                match renderable_store.get_renderable_object(item.renderable_object_internal_id) {
                     None => {}
-                    Some(prim) => {
+                    Some(obj) => {
                         // println!(
                         //     "drawing prim: indices_count = {}, material = {}, mesh_id = {}",
                         //     prim.indices_count, material_id, item.mesh_primitive_internal_id
                         // );
                         //prim.
-                        prim.bind(gl);
+
+                        match obj {
+                            RenderableObject::Elements(ero) => {
+                                ero.bind(gl);
+
+                                let transform = Transform::default();
+
+                                // TODO - get transform
+                                self.context
+                                    .renderer
+                                    .bind_model(gl, &transform.get_view_matrix());
+
+                                self.context.renderer.draw_elements(
+                                    gl,
+                                    PrimitiveType::Triangles,
+                                    DrawElementType::UnsignedInt,
+                                    ero.indices_count as i32,
+                                );
+                            }
+                            RenderableObject::InstanceElements(iero) => {
+                                //iero.bind(gl);
+                                //
+                                //let instance_count = 0;
+                                //
+                                //self.context.renderer.draw_elements_instanced(
+                                //    gl,
+                                //    PrimitiveType::Triangles,
+                                //    DrawElementType::UnsignedInt,
+                                //    iero.indices_count,
+                                //    instance_count
+                                //)
+                            }
+                        }
+
+                        //obj.bind(gl);
                         // A bit ugly with the need to pass in a shader id.
                         // But the does allow this render step a bit more control.
                         // Though it would be better added to the ctx or render.
 
                         // TODO - this would be the point to handle instancing?
-                        self.context
-                            .renderer
-                            .bind_model(gl, &prim.local_transform.get_view_matrix());
+                        //self.context
+                        //    .renderer
+                        //    .bind_model(gl, &prim.local_transform.get_view_matrix());
 
                         //obj.draw(gl,&self.context.renderer);
-                        self.context.renderer.draw_elements(
-                            gl,
-                            PrimitiveType::Triangles,
-                            DrawElementType::UnsignedInt,
-                            prim.indices_count,
-                        );
+                        //self.context.renderer.draw_elements(
+                        //    gl,
+                        //    PrimitiveType::Triangles,
+                        //    DrawElementType::UnsignedInt,
+                        //    prim.indices_count,
+                        //);
 
                         //self.context.renderer.draw_arrays(
                         //    gl,
@@ -283,6 +319,8 @@ impl RenderPipelineContext {
             }
         };
     }
+
+
 
     pub fn add_primitive(&mut self, primitive: &MeshPrimitive) {
         match self

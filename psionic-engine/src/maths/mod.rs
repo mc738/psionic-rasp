@@ -1,16 +1,19 @@
-﻿pub struct Float2 {
+﻿use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
+
+#[derive(Clone, Copy)]
+pub struct Float2 {
     pub x: f32,
     pub y: f32,
 }
 
+#[derive(Clone, Copy)]
 pub struct Float3 {
     pub x: f32,
     pub y: f32,
     pub z: f32,
 }
 
-use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
-
+#[derive(Clone, Copy)]
 pub struct Float4 {
     pub x: f32,
     pub y: f32,

@@ -1,5 +1,6 @@
 ﻿use crate::core::InternalIdMap;
 use crate::maths::Transform;
+use crate::render_pipeline::MaterialInternalId;
 use crate::rendering::PreviousRendererResources;
 use crate::rendering::core::{
     BufferUsage, IndexBufferObject, VertexArrayObject, VertexAttributePointerType,
@@ -11,7 +12,6 @@ use crate::rendering::geometry::{
 use glow::Context;
 use std::mem;
 use uuid::Uuid;
-use crate::render_pipeline::MaterialInternalId;
 // This has a flat structure with ids because in practice the mesh primitives are what actually gets rendered.
 // So this will be iterated over the most. It makes it a bit more annoying to use and manage, but higher level abstracts can handle this.
 // This way it is a lot easier to group of mesh primitives with the same material together.
@@ -42,10 +42,8 @@ pub struct MeshPrimitive {
     pub model_internal_id: ModelInternalId,
     pub mesh_internal_id: MeshInternalId,
     pub material_internal_id: u32,
-    layout: VertexAttributesLayout,
     pub local_transform: Transform,
-    voa: VertexArrayObject,
-    pub indices_count: i32,
+    pub vertices: VertexCollection,
 }
 
 pub struct NewModelStoreResources {
@@ -99,7 +97,6 @@ impl ModelStore {
 }
 
 impl Model {
-
     /// Create a new model.
     /// The ownership of meshes is on purpose here.
     /// This is called with `mem::take` to provide the value,
@@ -119,7 +116,6 @@ impl Model {
 }
 
 impl Mesh {
-
     /// Create a new mesh.
     /// The ownership of primitives is on purpose here.
     /// This is called with `mem::take` to provide the value,
@@ -141,40 +137,21 @@ impl Mesh {
 }
 
 impl MeshPrimitive {
-    pub fn build(
-        gl: &Context,
+    pub fn create(
         vertices_collection: &VertexCollection,
         internal_id: &MeshPrimitiveInternalId,
         model_internal_id: &ModelInternalId,
         mesh_internal_id: &MeshInternalId,
         material_internal_id: &MaterialInternalId,
-        transform: &Transform
+        transform: &Transform,
     ) -> Self {
-        //let vertices_data = vertices_collection.
-
-        let vertex_buffer = VertexBufferObject::create(gl);
-        let index_buffer = IndexBufferObject::create(gl);
-        let voa = VertexArrayObject::create(gl, vertex_buffer, index_buffer);
-
-        voa.buffer_data(gl, vertices_collection, BufferUsage::StaticDraw);
-        
         MeshPrimitive {
             internal_id: *internal_id,
             model_internal_id: *model_internal_id,
             mesh_internal_id: *mesh_internal_id,
             material_internal_id: *material_internal_id,
-            layout: vertices_collection.clone_layout(),
             local_transform: transform.clone(),
-            voa,
-            indices_count: vertices_collection.get_indices_count(),
+            vertices: vertices_collection.clone(),
         }
-    }
-
-    pub fn bind(&self, gl: &Context) {
-        self.voa.bind(gl)
-    }
-
-    pub fn free(&self, gl: &Context) {
-        self.voa.free(gl);
     }
 }

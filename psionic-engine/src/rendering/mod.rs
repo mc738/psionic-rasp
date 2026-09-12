@@ -1,5 +1,7 @@
 ﻿use crate::core::InternalIdMap;
 use crate::rendering::core::{DrawElementType, PrimitiveType};
+use crate::rendering::geometry::RenderableObject;
+use crate::rendering::geometry::RenderableObjectInternalId;
 use crate::rendering::materials::Material;
 use crate::rendering::models::{
     MeshPrimitive, MeshPrimitiveInternalId, Model, ModelStore, NewModelStoreResources,
@@ -7,10 +9,10 @@ use crate::rendering::models::{
 };
 use crate::rendering::shaders::Shader;
 use crate::rendering::textures::Texture;
+use bytemuck::cast_slice;
 use glam::Mat4;
 use glow::{Context, HasContext};
 use std::mem;
-use bytemuck::cast_slice;
 
 pub mod core;
 pub mod geometry;
@@ -53,7 +55,8 @@ pub struct PreviousRendererResources {
 }
 
 pub struct RenderableStore {
-    models: ModelStore,
+    renderable_objects: Vec<RenderableObject>,
+    //models: ModelStore,
     text: TextProvider,
     ui: UIProvider,
 }
@@ -121,16 +124,9 @@ impl Renderer {
 
                 // 2. Upload a simple quad
                 let verts: [f32; 12] = [
-                    -0.5, -0.5, 0.0,
-                    0.5, -0.5, 0.0,
-                    0.5,  0.5, 0.0,
-                    -0.5,  0.5, 0.0,
+                    -0.5, -0.5, 0.0, 0.5, -0.5, 0.0, 0.5, 0.5, 0.0, -0.5, 0.5, 0.0,
                 ];
-                gl.buffer_data_u8_slice(
-                    glow::ARRAY_BUFFER,
-                    cast_slice(&verts),
-                    glow::STATIC_DRAW,
-                );
+                gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, cast_slice(&verts), glow::STATIC_DRAW);
 
                 // 3. Set attrib 0 as position
                 gl.enable_vertex_attrib_array(0);
@@ -245,25 +241,37 @@ impl Renderer {
 impl RenderableStore {
     pub fn new() -> Self {
         Self {
-            models: ModelStore::new(),
+            renderable_objects: vec![],
+            //models: ModelStore::new(),
             text: TextProvider::new(),
             ui: UIProvider::new(),
         }
     }
 
-    pub fn swap_model_store_resources(
-        &mut self,
-        new_renderer_resources: NewModelStoreResources,
-    ) -> PreviousModelStoreResources {
-        self.models.swap_resources(new_renderer_resources)
+    //pub fn swap_model_store_resources(
+    //    &mut self,
+    //    new_renderer_resources: NewModelStoreResources,
+    //) -> PreviousModelStoreResources {
+    //    self.models.swap_resources(new_renderer_resources)
+    //}
+
+    //pub fn gather_mesh_primitives(&self) -> &[MeshPrimitive] {
+    //    self.models.get_primitives()
+    //}
+
+    pub fn gather_renderable_objects(&self) -> &[RenderableObject] {
+        &self.renderable_objects
     }
 
-    pub fn gather_mesh_primitives(&self) -> &[MeshPrimitive] {
-        self.models.get_primitives()
-    }
+    //pub fn get_mesh_primitive(&self, id: MeshPrimitiveInternalId) -> Option<&MeshPrimitive> {
+    //    self.models.get_primitive(id)
+    //}
 
-    pub fn get_mesh_primitive(&self, id: MeshPrimitiveInternalId) -> Option<&MeshPrimitive> {
-        self.models.get_primitive(id)
+    pub fn get_renderable_object(
+        &self,
+        id: RenderableObjectInternalId,
+    ) -> Option<&RenderableObject> {
+        self.renderable_objects.get(id as usize)
     }
 }
 

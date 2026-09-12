@@ -25,8 +25,7 @@ struct TestGame {
 
 impl Game for TestGame {
     fn load(&mut self, ctx: &mut RuntimeContext) -> () {
-
-
+        println!("Hello world!");
     }
 
     fn update(&mut self, ctx: &mut RuntimeContext, dt: &f32) -> () {

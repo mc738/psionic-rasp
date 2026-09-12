@@ -1,8 +1,19 @@
 ﻿pub mod meshes;
 
+use glow::Context;
 use crate::maths::{AsFloat2, Float2, Float3, Float4};
-use crate::rendering::core::{BufferObject, VertexArrayObject};
+use crate::rendering::core::{BufferObject, BufferUsage, IndexBufferObject, VertexArrayObject, VertexBufferObject};
+use crate::rendering::models::MeshPrimitive;
 
+
+pub type RenderableObjectInternalId = u32;
+
+pub enum RenderableObject {
+    Elements(ElementsRenderableObject),
+    InstanceElements(InstanceElementsRenderableObject),
+}
+
+#[derive(Clone)]
 pub enum VertexAttribute {
     Float(f32),
     Float2(Float2),
@@ -11,14 +22,13 @@ pub enum VertexAttribute {
     None,
 }
 
+#[derive(Clone)]
 pub struct Vertex {
-    // NOTE - currently there is a hard limit of 8 attributes per vertex.
     pub attributes: Vec<VertexAttribute>,
 }
 
 #[derive(Clone)]
 pub struct VertexAttributesLayout {
-    // NOTE - currently there is a hard limit of 8 attributes per vertex.#
     pub size: i32,
     pub items: Vec<VertexAttributesLayoutItem>,
 }
@@ -28,33 +38,49 @@ pub struct VertexAttributesLayoutItem {
     pub count: u32,
     pub active: bool
 }
-
-
 pub struct Triangle {
     vertex_1: Vertex,
     vertex_2: Vertex,
     vertex_3: Vertex,
 }
-
-pub struct ElementMesh {
-    layout: VertexAttributesLayout,
-    vertex_buffer: BufferObject,
-    index_buffer: BufferObject,
+pub struct ElementsRenderableObject {
+    pub layout: VertexAttributesLayout,
+    //vertex_buffer: BufferObject,
+    //index_buffer: BufferObject,
     voa: VertexArrayObject,
-    vertices: Vec<Vertex>,
-    indices: Vec<u32>
+    pub indices_count: u32,
+
+    //vertices: Vec<Vertex>,
+    //indices: Vec<u32>
 }
-
 impl VertexAttribute {}
-
-
-impl ElementMesh {
+impl ElementsRenderableObject {
     pub fn new() -> Self {
         todo!()
     }
+
+
+    pub fn from_mesh_primitive(gl: &Context, primitive: &MeshPrimitive) -> ElementsRenderableObject {
+
+        let vertex_buffer = VertexBufferObject::create(gl);
+        let index_buffer = IndexBufferObject::create(gl);
+        let voa = VertexArrayObject::create(gl, vertex_buffer, index_buffer);
+
+        voa.buffer_data(gl, &primitive.vertices, BufferUsage::StaticDraw);
+
+        Self {
+            layout: primitive.vertices.layout.clone(),
+            //vertex_buffer: vertex_buffer,
+            //index_buffer: (),
+            voa,
+            indices_count: primitive.vertices.indices.len() as u32,
+        }
+    }
+
+
 }
 
-
+#[derive(Clone)]
 pub struct VertexCollection {
     layout: VertexAttributesLayout,
     vertices: Vec<Vertex>,
@@ -127,4 +153,24 @@ impl VertexCollection {
         self.layout
     }
 
+}
+
+pub struct InstanceElementsRenderableObject {
+    layout: VertexAttributesLayout,
+    vertex_buffer: BufferObject,
+    index_buffer: BufferObject,
+    voa: VertexArrayObject,
+    vertices: Vec<Vertex>,
+    indices: Vec<u32>
+}
+
+impl InstanceElementsRenderableObject {
+    pub fn new() -> Self {
+        panic!("todo")
+    }
+
+
+    pub fn from_mesh_primitive(primitive: &MeshPrimitive) -> InstanceElementsRenderableObject {
+        panic!("todo")
+    }
 }

@@ -1,4 +1,5 @@
-﻿use crate::core::InternalIdMap;
+﻿use crate::camera::Camera;
+use crate::core::InternalIdMap;
 use crate::maths::Transform;
 use crate::rendering::NewRendererResources;
 use crate::rendering::materials::{BasicMaterial, Material, UnlitMaterial};
@@ -7,12 +8,13 @@ use crate::rendering::models::{
 };
 use crate::rendering::shaders::Shader;
 use crate::rendering::textures::Texture;
-use crate::templates::{MaterialTemplate, MaterialTemplateType, MeshPrimitiveTemplate, SceneTemplate};
+use crate::templates::{
+    MaterialTemplate, MaterialTemplateType, MeshPrimitiveTemplate, SceneTemplate,
+};
 use glow::Context;
 use std::collections::HashMap;
 use std::mem;
 use uuid::Uuid;
-use crate::camera::Camera;
 
 pub struct SceneInstance {
     pub graph: SceneGraph,
@@ -36,9 +38,9 @@ pub type NodeId = u32;
 /// A type representing the scene graph.
 /// Nodes are stored in a flat store with "pointers" to their parent (if they have one)
 /// and their children.
-/// The might be a bit more internal maintenance. But a lot of that should be hidden.
-/// On the flip side it is MUCH easier and quicker to just cycle the whole graph without recursion,
-/// build indexes etc.#
+/// They might be a bit more internal maintenance. But a lot of that should be hidden.
+/// On the flip side it is MUCH easier and quicker to just cycle the whole graph without recursion
+/// when build indexes etc.
 /// This way the scene graph node also becomes a really simple collection of properties and "pointers".
 /// Which should hopefully be a bit more memory efficient and cache friendly.
 pub struct SceneGraph {
@@ -75,7 +77,12 @@ pub struct TransformsCollection {
 type RenderableId = u32;
 
 impl SceneInstance {
-    pub fn create(nodes: Vec<SceneGraphNode>, transforms: Vec<Transform>, world_root: Transform, main_camera: Camera) -> Self {
+    pub fn create(
+        nodes: Vec<SceneGraphNode>,
+        transforms: Vec<Transform>,
+        world_root: Transform,
+        main_camera: Camera,
+    ) -> Self {
         Self {
             main_camera,
             graph: SceneGraph { nodes },
@@ -87,11 +94,11 @@ impl SceneInstance {
     }
 
     /// Create a blank scene.
-    /// This differs from `.new()` because its intention is to always just create the minimum needed scene to prevent crashes.
+    /// This differs from `.new()` because its intention is to always just create the minimum necessary scene to prevent crashes.
     /// It doesn't need to actually be able to do anything.
     pub fn blank() -> Self {
         Self {
-            main_camera: Camera::create(800. ,600.),
+            main_camera: Camera::create(800., 600.),
             graph: SceneGraph { nodes: vec![] },
             transforms: TransformsCollection::new(),
         }
@@ -101,7 +108,6 @@ impl SceneInstance {
     /// This will update all dirty transforms.
     pub fn commit(&mut self) {
         self.main_camera.update_basis();
-
     }
 
     /// The method currently does nothing.
@@ -180,7 +186,6 @@ impl SceneLoader {
 
     pub fn load_scene_models(
         &self,
-        gl: &Context,
         material_id_map: &InternalIdMap,
     ) -> NewModelStoreResources {
         let mut models: Vec<Model> = Vec::new();
@@ -205,8 +210,7 @@ impl SceneLoader {
                     let material_internal_id =
                         material_id_map.get_internal_id(&prim.material_id).unwrap();
 
-                    let new_primitive = MeshPrimitive::build(
-                        gl,
+                    let new_primitive = MeshPrimitive::create(
                         &prim.vertices,
                         &next_primitive_id,
                         &next_model_id,
