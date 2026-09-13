@@ -3,11 +3,9 @@ use glow::{Context, HasContext};
 use psionic_engine::camera::Camera;
 use psionic_engine::render_pipeline::{RenderPipeline, RenderPipelineConfiguration};
 use psionic_engine::resources::resource_manager::ResourceManager;
-use psionic_engine::resources::resources_map::ResourcesMap;
 use psionic_engine::scenes::SceneInstance;
 use psionic_engine::scenes::scene_loader::{LoadedScene, PreviousScene, SceneLoader};
 use psionic_engine::templates::SceneTemplate;
-use raw_window_handle::HasWindowHandle;
 use std::mem;
 use winit::keyboard::PhysicalKey;
 use winit::window::Window;
@@ -41,6 +39,7 @@ pub struct RuntimeConfiguration {
     input_map: InputMap,
 }
 
+#[allow(unused)]
 pub struct Runtime {
     gl: Context,
     game: Box<dyn Game>,
@@ -153,51 +152,6 @@ impl Runtime {
 
         let previous_scene = self.context.swap_scene(new_scene);
 
-        //let new_resources = self.scene_loader.load_resources(&self.gl);
-
-        //let renderer_resources = self.scene_loader.load_scene_render_resources(&self.gl);
-        //let models = self
-        //    .scene_loader
-        //    .load_scene_models(&renderer_resources.materials_map);
-
-        // TODO create any renderable objects required from here.
-
-        // There is an optimization to be made here.
-        // Currently, we are loading the resources then cloning the maps to pass to the scene.
-        // Instead, we could also return the maps from the swap functions and save the clone.
-        // They would possibly need to come back as a tuple with the previous resources,
-        // so they can be moved by themselves.
-        //
-        // However, I am not sure what difference this will make in reality.
-        // The load function might already take 1 to 2 seconds (or more??).
-        // So the extra clone and drop probably won't be noticed.
-        //
-        // It is left like this for now because other components might want to keep a resource map.
-
-        //let resource_map = ResourcesMap {
-        //    materials_map: renderer_resources.materials_map.clone(),
-        //    textures_map: renderer_resources.textures_map.clone(),
-        //    shaders_map: renderer_resources.shaders_map.clone(),
-        //    models_map: models.models_id_map.clone(),
-        //    meshes_map: models.meshes_id_map.clone(),
-        //    mesh_primitives_map: models.primitives_id_map.clone(),
-        //    renderable_objects_map: (),
-        //};
-
-        //let previous_resources = self
-        //    .context
-        //    .resource_manager
-        //    .swap_resources(self.scene_loader.load_resources(&self.gl));
-
-        //let previous_renderer_resources = self
-        //    .render_pipeline
-        //    .swap_renderer_resources(renderer_resources);
-        //let previous_models = self
-        //    .context
-        //    .resource_manager
-        //    //.renderable_store
-        //    .swap_model_store_resources(models);
-
         // No deferrer clear up here (currently at least).
         // So free up all the renderer resources.
         for shader in previous_scene.resources.shaders {
@@ -212,19 +166,8 @@ impl Runtime {
             ro.free(&self.gl);
         }
 
-        //self.context.resources_map = resource_map;
-
         // Build and initialize the main camera.
-        let main_camera = Camera::create(self.window_width, self.window_height);
-
-        // Now that everything is loaded, create a new scene instance.
-        //let new_scene = self.scene_loader.build_scene_instance(
-        //    self.window_width,
-        //    self.window_height,
-        //    &self.context.resource_manager.resource_map,
-        //);
-        //
-        //let old_scene = mem::replace(&mut self.context.active_scene, new_scene);
+        let _main_camera = Camera::create(self.window_width, self.window_height);
 
         // The old scene should have nothing left to clean up.
         // This call currently does nothing, but in the future scenes might have managed resources that need freeing.

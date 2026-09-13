@@ -1,6 +1,5 @@
 ﻿use crate::render_pipeline::MaterialInternalId;
 use crate::rendering::geometry::RenderableObjectInternalId;
-use crate::resources::{ResourceLink, ResourceLinks};
 
 pub type TransformInternalId = u32;
 
@@ -34,23 +33,6 @@ pub struct SceneGraphNodeRenderable {
 }
 
 impl SceneGraph {
-
-    /*
-    pub fn get_renderable_nodes(&self) -> &[&SceneGraphNodeRenderable] {
-        let mut renderable_nodes = Vec::new();
-
-        for node in &self.nodes {
-            if self.is_active(node.id) && node.renderables.len() > 0 {
-
-                for renderable in &node.renderables {
-                    renderable_nodes.push(renderable);
-                }
-            }
-        }
-
-        renderable_nodes.as_slice()
-    }
-    */
 
     pub fn is_active(&self, node_id: NodeId) -> bool {
         if self.nodes[node_id as usize].active {

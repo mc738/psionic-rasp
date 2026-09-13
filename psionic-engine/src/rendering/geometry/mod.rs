@@ -53,6 +53,9 @@ pub struct VertexAttributesLayoutItem {
     pub count: u32,
     pub active: bool
 }
+
+
+#[allow(unused)]
 pub struct Triangle {
     vertex_1: Vertex,
     vertex_2: Vertex,
@@ -102,6 +105,7 @@ impl ElementsRenderableObject {
 }
 
 #[derive(Clone)]
+#[allow(unused)]
 pub struct VertexCollection {
     layout: VertexAttributesLayout,
     vertices: Vec<Vertex>,
@@ -176,6 +180,7 @@ impl VertexCollection {
 
 }
 
+#[allow(unused)]
 pub struct InstanceElementsRenderableObject {
     layout: VertexAttributesLayout,
     vertex_buffer: BufferObject,
@@ -191,7 +196,7 @@ impl InstanceElementsRenderableObject {
     }
 
 
-    pub fn from_mesh_primitive(primitive: &MeshPrimitive) -> InstanceElementsRenderableObject {
+    pub fn from_mesh_primitive(_primitive: &MeshPrimitive) -> InstanceElementsRenderableObject {
         panic!("todo")
     }
 

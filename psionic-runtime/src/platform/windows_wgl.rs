@@ -1,6 +1,6 @@
 ﻿use glow::Context;
-use raw_window_handle::{HasRawWindowHandle, HasWindowHandle, RawWindowHandle};
-use std::ffi::{CString, c_void};
+use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+use std::ffi::c_void;
 use std::{mem, ptr};
 use windows_sys::Win32::Foundation::*;
 use windows_sys::Win32::Graphics::Gdi::*;
@@ -37,7 +37,7 @@ pub fn create_gl_context(window: &winit::window::Window) -> (Context, impl Fn() 
         wglMakeCurrent(hdc, hglrc);
 
         let gl = Context::from_loader_function(|s| {
-            let name = CString::new(s).unwrap();
+            //let name = CString::new(s).unwrap();
             let ptr = wglGetProcAddress(s.as_ptr());
 
             match ptr {
@@ -46,16 +46,14 @@ pub fn create_gl_context(window: &winit::window::Window) -> (Context, impl Fn() 
                     if GL_LIB == None {
                         GL_LIB = Some(LoadLibraryA(b"opengl32.dll\0".as_ptr() as *const u8));
                     }
-                    let core_ptr =  GetProcAddress(GL_LIB.unwrap(), s.as_ptr());
+                    let core_ptr = GetProcAddress(GL_LIB.unwrap(), s.as_ptr());
 
                     match core_ptr {
                         None => {}
-                        Some(c_p) => return c_p as *const c_void
+                        Some(c_p) => return c_p as *const c_void,
                     }
                 }
-                Some(ptr) => {
-                    return ptr as *const c_void
-                }
+                Some(ptr) => return ptr as *const c_void,
             }
 
             ptr::null()

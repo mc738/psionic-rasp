@@ -1,10 +1,8 @@
 ﻿use crate::maths::Transform;
 use crate::rendering::Renderer;
 use crate::rendering::core::{DrawElementType, PrimitiveType};
-use crate::rendering::geometry::{RenderableObject, RenderableObjectInternalId};
+use crate::rendering::geometry::{RenderableObject};
 use crate::rendering::materials::Material;
-use crate::rendering::models::MeshPrimitive;
-use crate::resources::ResourceLink;
 use crate::resources::resource_manager::ResourceManager;
 use crate::scenes::SceneInstance;
 use crate::scenes::scene_graph::{NodeId, TransformInternalId};
@@ -44,6 +42,7 @@ pub struct RenderPipelineConfiguration {
     pub shadows_enabled: bool,
 }
 
+#[allow(unused)]
 pub struct RenderPipeline {
     context: RenderPipelineContext,
     config: RenderPipelineConfiguration,
@@ -81,23 +80,23 @@ impl RenderPipeline {
 
     fn shadow_render_pass(
         &mut self,
-        gl: &Context,
-        scene: &SceneInstance,
-        renderable_store: &ResourceManager,
+        _gl: &Context,
+        _scene: &SceneInstance,
+        _resource_manager: &ResourceManager,
     ) {
     }
 
     fn opaque_render_pass(
         &mut self,
         gl: &Context,
-        scene: &SceneInstance,
+        _scene: &SceneInstance,
         resource_manager: &ResourceManager,
     ) {
         for (material_id, batch) in &self.context.opaque_primitive_batches {
             match resource_manager.get_material(material_id) {
                 None => {}
                 Some(material) => {
-                    let shader_id = match material {
+                    match material {
                         Material::Basic(m) => {
                             match resource_manager.get_shader(&m.shader_internal_id) {
                                 None => {}
@@ -124,7 +123,6 @@ impl RenderPipeline {
                                                 //     "drawing prim: indices_count = {}, material = {}, mesh_id = {}",
                                                 //     prim.indices_count, material_id, item.mesh_primitive_internal_id
                                                 // );
-                                                //prim.
 
                                                 match obj {
                                                     RenderableObject::Elements(ero) => {
@@ -145,7 +143,7 @@ impl RenderPipeline {
                                                             ero.indices_count as i32,
                                                         );
                                                     }
-                                                    RenderableObject::InstanceElements(iero) => {
+                                                    RenderableObject::InstanceElements(_iero) => {
                                                         //iero.bind(gl);
                                                         //
                                                         //let instance_count = 0;
@@ -190,7 +188,7 @@ impl RenderPipeline {
                                 }
                             }
                         }
-                        Material::Unlit(m) => {}
+                        Material::Unlit(_m) => {}
                     };
                 }
             }
@@ -206,41 +204,41 @@ impl RenderPipeline {
 
     fn transparent_render_pass(
         &mut self,
-        gl: &Context,
-        scene: &SceneInstance,
-        renderable_store: &ResourceManager,
+        _gl: &Context,
+        _scene: &SceneInstance,
+        _resource_manager: &ResourceManager,
     ) {
     }
 
     fn ui_render_pass(
         &mut self,
-        gl: &Context,
-        scene: &SceneInstance,
-        renderable_store: &ResourceManager,
+        _gl: &Context,
+        _scene: &SceneInstance,
+        _resource_manager: &ResourceManager,
     ) {
     }
 
     fn text_render_pass(
         &mut self,
-        gl: &Context,
-        scene: &SceneInstance,
-        renderable_store: &ResourceManager,
+        _gl: &Context,
+        _scene: &SceneInstance,
+        _resource_manager: &ResourceManager,
     ) {
     }
 
     fn particles_render_pass(
         &mut self,
-        gl: &Context,
-        scene: &SceneInstance,
-        renderable_store: &ResourceManager,
+        _gl: &Context,
+        _scene: &SceneInstance,
+        _resource_manager: &ResourceManager,
     ) {
     }
 
     fn post_fx_render_pass(
         &mut self,
-        gl: &Context,
-        scene: &SceneInstance,
-        renderable_store: &ResourceManager,
+        _gl: &Context,
+        _scene: &SceneInstance,
+        _resource_manager: &ResourceManager,
     ) {
     }
 
@@ -270,23 +268,16 @@ impl RenderPipeline {
 
         self.context.build_batches(resource_manager, scene);
 
-        // Gather the primitives for rendering.
-        //for prim in renderable_store.gather_mesh_primitives() {
-        //    self.context.add_primitive(prim);
-        //}
-
         // Sort the render batches.
         self.context.sort();
 
-        //self.shadow_render_pass(gl, scene, renderable_store);
+        self.shadow_render_pass(gl, scene, resource_manager);
         self.opaque_render_pass(gl, scene, resource_manager);
-        //self.transparent_render_pass(gl, scene, renderable_store);
-        //self.ui_render_pass(gl, scene, renderable_store);
-        //self.text_render_pass(gl, scene, renderable_store);
-        //self.particles_render_pass(gl, scene, renderable_store);
-        //self.post_fx_render_pass(gl, scene, renderable_store);
-
-        //self.context.renderer.render_frame(gl);
+        self.transparent_render_pass(gl, scene, resource_manager);
+        self.ui_render_pass(gl, scene, resource_manager);
+        self.text_render_pass(gl, scene, resource_manager);
+        self.particles_render_pass(gl, scene, resource_manager);
+        self.post_fx_render_pass(gl, scene, resource_manager);
     }
 
     pub fn reset_context(&mut self) {
@@ -361,7 +352,7 @@ impl RenderPipelineContext {
         //let nodes_with_renderables = scene.graph.get_renderable_nodes();
 
         for node in &scene.graph.nodes {
-            if (scene.graph.is_active(node.id)) {
+            if scene.graph.is_active(node.id) {
                 for renderable in &node.renderables {
                     renderable_object_ids.push(renderable);
 
@@ -394,33 +385,6 @@ impl RenderPipelineContext {
             }
         }
     }
-
-    /*
-    pub fn add_primitive(&mut self, primitive: &MeshPrimitive) {
-        match self
-            .renderer
-            .is_material_transparent(primitive.material_internal_id)
-        {
-            None => {
-                // Material no found, so do nothing and eventually log a warning?
-            }
-            Some(is_transparent) => {
-                let rbi = RenderBatchItem {
-                    mesh_primitive_internal_id: primitive.internal_id,
-                    distance_to_camera: 0.0,
-                };
-
-                match is_transparent {
-                    false => {
-                        self.add_to_opaque_primitive_batches(primitive.material_internal_id, rbi)
-                    }
-                    true => self
-                        .add_to_transparent_primitive_batches(primitive.material_internal_id, rbi),
-                }
-            }
-        }
-    }
-    */
 
     pub fn sort(&mut self) {
         // Opaque are items render from front to back.

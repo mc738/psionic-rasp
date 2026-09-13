@@ -16,12 +16,14 @@ pub type ModelInternalId = u32;
 pub type MeshInternalId = u32;
 pub type MeshPrimitiveInternalId = u32;
 
+#[allow(unused)]
 pub struct Model {
     pub internal_id: ModelInternalId,
     meshes: Vec<MeshInternalId>,
     local_transform: Transform,
 }
 
+#[allow(unused)]
 pub struct Mesh {
     pub internal_id: MeshInternalId,
     pub model_internal_id: ModelInternalId,

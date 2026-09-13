@@ -23,12 +23,11 @@ pub struct SceneInstance {
 /// In the future if dynamic loading and unloading of models and resources becomes a thing this could become a pain.
 /// However, anything that might need to spawn things at runtime might be better handled with object pooling.
 /// That way they still exist here but just won't be queried until active again.
+#[allow(unused)]
 pub struct TransformsCollection {
     root: Transform,
     transforms: Vec<Transform>,
 }
-
-type RenderableId = u32;
 
 impl SceneInstance {
     pub fn create(

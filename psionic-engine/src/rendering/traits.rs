@@ -10,23 +10,3 @@ pub trait RenderContentProvider {
     fn get_shader_internal_index(id: &Uuid) -> Option<i32>;
     fn get_texture_internal_index(id: &Uuid) -> Option<i32>;
 }
-
-/*
-pub trait Renderable {
-    fn is_transparent(&self) -> bool;
-    fn get_transform(&self) -> &Transform;
-
-    fn get_object_tag(&self) -> i32;
-
-    fn get_material_id(&self) -> Uuid;
-
-    fn get_material_internal_id(&self) -> u32;
-
-    fn bind(&self, gl: &Context) -> ();
-    fn draw(&self, gl: &Context, renderer: &Renderer) -> u32;
-
-    fn get_internal_id(&self) -> u32;
-
-    fn set_internal_id(&mut self, internal_id: u32);
-}
-*/

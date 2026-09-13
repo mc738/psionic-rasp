@@ -1,6 +1,6 @@
 ﻿use glam::{Mat4, Vec3};
 
-
+#[allow(unused)]
 pub struct Camera {
     pub near: f32,
     pub far: f32,
@@ -33,7 +33,12 @@ impl Camera {
     }
 
     pub fn get_projection_matrix(&self) -> Mat4 {
-        glam::camera::rh::proj::opengl::perspective(self.fov, self.aspect_ratio, self.near, self.far)
+        glam::camera::rh::proj::opengl::perspective(
+            self.fov,
+            self.aspect_ratio,
+            self.near,
+            self.far,
+        )
     }
 
     pub fn get_view_matrix(&self) -> Mat4 {
@@ -46,7 +51,8 @@ impl Camera {
             self.yaw.cos() * self.pitch.cos(),
             self.pitch.sin(),
             self.yaw.sin() * self.pitch.cos(),
-        ).normalize();
+        )
+        .normalize();
 
         // Camera looks down -Z in OpenGL RH
         self.forward = -self.forward;

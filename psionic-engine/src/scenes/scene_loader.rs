@@ -1,11 +1,10 @@
 ﻿use crate::camera::Camera;
 use crate::core::InternalIdMap;
 use crate::maths::Transform;
-use crate::rendering::NewRendererResources;
 use crate::rendering::geometry::{ElementsRenderableObject, RenderableObject};
 use crate::rendering::materials::{BasicMaterial, Material, UnlitMaterial};
 use crate::rendering::models::{
-    Mesh, MeshInternalId, MeshPrimitive, MeshPrimitiveInternalId, Model, NewModelStoreResources,
+    Mesh, MeshInternalId, MeshPrimitive, MeshPrimitiveInternalId, Model,
 };
 use crate::rendering::shaders::Shader;
 use crate::rendering::textures::Texture;
@@ -16,7 +15,6 @@ use crate::scenes::{SceneGraphNode, SceneInstance};
 use crate::templates::{MaterialTemplateType, SceneTemplate};
 use glow::Context;
 use std::mem;
-use uuid::Uuid;
 
 pub struct SceneLoader {
     template: SceneTemplate,
@@ -36,138 +34,6 @@ impl SceneLoader {
     pub fn create(template: SceneTemplate) -> Self {
         Self { template }
     }
-
-    /*
-    pub fn load_scene_render_resources(&self, gl: &Context) -> NewRendererResources {
-        let mut shaders: Vec<Shader> = Vec::with_capacity(self.template.shaders.len());
-        let mut textures: Vec<Texture> = Vec::with_capacity(self.template.textures.len());
-        let mut materials: Vec<Material> = Vec::with_capacity(self.template.materials.len());
-        let mut shaders_map: InternalIdMap = InternalIdMap::new();
-        let mut textures_map: InternalIdMap = InternalIdMap::new();
-        let mut materials_map: InternalIdMap = InternalIdMap::new();
-
-        let mut shader_internal_id = 0;
-
-        for x in &self.template.shaders {
-            let shader = Shader::create(gl, &x.vertex_code, &x.fragment_code);
-            shaders.push(shader);
-            shaders_map.add(&x.id, shader_internal_id);
-            shader_internal_id = shader_internal_id + 1;
-        }
-
-        let mut texture_internal_id = 0;
-
-        for x in &self.template.textures {
-            let texture = Texture::create(gl, x.data.as_slice(), x.width as i32, x.height as i32);
-            textures.push(texture);
-            textures_map.add(&x.id, texture_internal_id);
-            texture_internal_id += 1;
-        }
-
-        let mut material_internal_id = 0;
-
-        for x in &self.template.materials {
-            let material = match &x.material_type {
-                MaterialTemplateType::Basic(bt) => Material::Basic(BasicMaterial {
-                    shader_internal_id: shaders_map.get_internal_id(&bt.shader_id).unwrap(),
-                    is_transparent: bt.is_transparent,
-                }),
-                MaterialTemplateType::Unlit(ut) => Material::Unlit(UnlitMaterial {
-                    shader_internal_id: 0,
-                    texture_internal_id: 0,
-                    is_transparent: ut.is_transparent,
-                }),
-            };
-
-            materials.push(material);
-            materials_map.add(&x.id, material_internal_id);
-            material_internal_id = material_internal_id + 1;
-        }
-
-        NewRendererResources {
-            shaders,
-            textures,
-            materials,
-            shaders_map,
-            textures_map,
-            materials_map,
-        }
-    }
-
-    pub fn load_scene_models(&self, material_id_map: &InternalIdMap) -> NewModelStoreResources {
-        let mut models: Vec<Model> = Vec::new();
-        let mut meshes: Vec<Mesh> = Vec::new();
-        let mut primitives: Vec<MeshPrimitive> = Vec::new();
-        let mut models_id_map = InternalIdMap::new();
-        let mut meshes_id_map = InternalIdMap::new();
-        let mut primitives_id_map = InternalIdMap::new();
-        let mut next_model_id = 0;
-        let mut next_mesh_id = 0;
-        let mut next_primitive_id = 0;
-
-        let mut mesh_ids: Vec<MeshInternalId> = Vec::new();
-        let mut primitive_ids: Vec<MeshPrimitiveInternalId> = Vec::new();
-
-        for model in &self.template.models {
-            //mesh_ids.clear();
-            for mesh in &model.meshes {
-                //primitive_ids.clear();
-
-                for prim in &mesh.primitives {
-                    let material_internal_id =
-                        material_id_map.get_internal_id(&prim.material_id).unwrap();
-
-                    let new_primitive = MeshPrimitive::create(
-                        &prim.vertices,
-                        &next_primitive_id,
-                        &next_model_id,
-                        &next_mesh_id,
-                        &material_internal_id,
-                        &prim.local_transform,
-                    );
-
-                    primitives.push(new_primitive);
-                    primitives_id_map.add(&prim.id, next_primitive_id);
-                    primitive_ids.push(next_primitive_id);
-
-                    next_primitive_id = next_primitive_id + 1
-                }
-
-                let new_mesh = Mesh::create(
-                    &next_mesh_id,
-                    &next_primitive_id,
-                    mem::take(&mut primitive_ids),
-                    &mesh.local_transform,
-                );
-
-                meshes.push(new_mesh);
-                mesh_ids.push(next_mesh_id);
-                meshes_id_map.add(&mesh.id, next_mesh_id);
-
-                next_mesh_id = next_mesh_id + 1
-            }
-
-            let new_model = Model::create(
-                &next_model_id,
-                mem::take(&mut mesh_ids),
-                &model.local_transform,
-            );
-
-            models.push(new_model);
-            models_id_map.add(&model.id, next_model_id);
-            next_model_id = next_model_id + 1;
-        }
-
-        NewModelStoreResources {
-            models,
-            meshes,
-            primitives,
-            models_id_map,
-            meshes_id_map,
-            primitives_id_map,
-        }
-    }
-    */
 
     pub fn load_scene(&self, gl: &Context, display_width: f32, display_height: f32) -> LoadedScene {
         let new_resources = self.load_resources(gl);
@@ -308,22 +174,6 @@ impl SceneLoader {
             next_model_id = next_model_id + 1;
         }
 
-        /*
-        for prim in &primitives {
-
-
-
-
-                //Uuid::new_v4();
-
-            let em = ElementsRenderableObject::from_mesh_primitive(&gl, prim);
-            renderable_objects_map.add(&ro_id, next_renderable_object_id);
-
-            renderable_objects.push(RenderableObject::Elements(em));
-            next_renderable_object_id = next_renderable_object_id + 1;
-        }
-        */
-
         NewResourcesCollection {
             renderable_objects,
             textures,
@@ -371,7 +221,7 @@ impl SceneLoader {
         result
     }
 
-    pub fn load_materials(&mut self, gl: &Context) -> Vec<Material> {
+    pub fn load_materials(&mut self, _gl: &Context) -> Vec<Material> {
         let mut result: Vec<Material> = Vec::with_capacity(self.template.materials.len());
 
         for x in &self.template.materials {
