@@ -614,7 +614,7 @@ impl RenderPipelineContext {
                         distance_to_camera: 0.0,
                     };
 
-                    match resource_manager.get_material(&renderable.renderable_object_internal_id) {
+                    match resource_manager.get_material(&renderable.material_internal_id) {
                         None => {
                             println!(
                                 "No material found for renderable object with internal ID: {}",

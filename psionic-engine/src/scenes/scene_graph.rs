@@ -62,3 +62,17 @@ impl SceneGraphNodeRenderable {
         }
     }
 }
+
+impl SceneGraphNode {
+    pub fn set_active(&mut self, active: bool) {
+        self.active = active;
+    }
+
+    pub fn set_children(&mut self, children: Vec<NodeId>) {
+        self.children = children;
+    }
+
+    pub fn set_renderables(&mut self, renderables: Vec<SceneGraphNodeRenderable>) {
+        self.renderables = renderables;
+    }
+}

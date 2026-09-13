@@ -306,12 +306,27 @@ impl SceneLoader {
             }
         }
 
+        let this_node_id = next_node_id;
+        let this_transform_id = next_transform_id;
+
         transforms.push(node.transform.clone());
+        // Insert the node straight away.
+        nodes.push(SceneGraphNode {
+            id: this_node_id,
+            active: true,
+            transform_internal_id: this_transform_id,
+            parent_node_id: parent_internal_id,
+            children: Vec::new(),
+            renderables,
+        });
+
         next_transform_id += 1;
+        next_node_id += 1;
 
         let mut children = Vec::new();
 
         for child in &node.children {
+
             let (nni, nti) = self.build_node(
                 &resources_map,
                 child,
@@ -319,23 +334,28 @@ impl SceneLoader {
                 next_transform_id,
                 transforms,
                 nodes,
-                Some(next_node_id),
+                Some(this_node_id),
             );
             next_node_id = nni;
             next_transform_id = nti;
             children.push(nni);
         }
 
-        transforms.push(node.transform.clone());
+        let mut sgn = nodes.get_mut(this_node_id as usize).unwrap();
 
-        nodes.push(SceneGraphNode {
-            id: next_node_id,
-            active: true,
-            transform_internal_id: next_transform_id,
-            parent_node_id: parent_internal_id,
-            children,
-            renderables,
-        });
+        sgn.set_children(children);
+        //sgn.set_renderables(renderables);
+
+      //  transforms.push(node.transform.clone());
+
+        //nodes.push(SceneGraphNode {
+        //    id: next_node_id,
+        //    active: true,
+        //    transform_internal_id: next_transform_id,
+        //    parent_node_id: parent_internal_id,
+        //    children,
+        //    renderables,
+        //});
 
         (next_node_id, next_transform_id)
     }
