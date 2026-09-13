@@ -3,7 +3,7 @@ use crate::rendering::geometry::{RenderableObject, RenderableObjectInternalId};
 use crate::rendering::materials::Material;
 use crate::rendering::models::{Mesh, MeshPrimitive, Model};
 use crate::rendering::shaders::{Shader, ShaderInternalId};
-use crate::rendering::textures::Texture;
+use crate::rendering::textures::{Texture, TextureInternalId};
 use crate::resources::resources_map::ResourcesMap;
 use std::mem;
 
@@ -79,6 +79,10 @@ impl ResourceManager {
 
     pub fn get_shader(&self, shader_id: &ShaderInternalId) -> Option<&Shader> {
         self.shaders.get(*shader_id as usize)
+    }
+
+    pub fn get_texture(&self, texture_id: &TextureInternalId) -> Option<&Texture> {
+        self.textures.get(*texture_id as usize)
     }
 
     pub fn get_renderable_object(

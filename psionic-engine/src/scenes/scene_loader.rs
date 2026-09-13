@@ -93,8 +93,8 @@ impl SceneLoader {
                     is_transparent: bt.is_transparent,
                 }),
                 MaterialTemplateType::Unlit(ut) => Material::Unlit(UnlitMaterial {
-                    shader_internal_id: 0,
-                    texture_internal_id: 0,
+                    shader_internal_id: shaders_map.get_internal_id(&ut.shader_id).unwrap(),
+                    texture_internal_id: textures_map.get_internal_id(&ut.texture_id).unwrap(),
                     is_transparent: ut.is_transparent,
                 }),
             };

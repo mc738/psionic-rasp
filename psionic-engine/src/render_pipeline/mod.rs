@@ -1,8 +1,9 @@
 ﻿use crate::maths::Transform;
 use crate::rendering::Renderer;
 use crate::rendering::core::{DrawElementType, PrimitiveType};
-use crate::rendering::geometry::{RenderableObject};
+use crate::rendering::geometry::RenderableObject;
 use crate::rendering::materials::Material;
+use crate::rendering::textures::types::TextureUnit;
 use crate::resources::resource_manager::ResourceManager;
 use crate::scenes::SceneInstance;
 use crate::scenes::scene_graph::{NodeId, TransformInternalId};
@@ -128,7 +129,12 @@ impl RenderPipeline {
                                                     RenderableObject::Elements(ero) => {
                                                         ero.bind(gl);
 
-                                                        let transform = _scene.transforms.get_transform(item.transform_internal_id).unwrap();
+                                                        let transform = _scene
+                                                            .transforms
+                                                            .get_transform(
+                                                                item.transform_internal_id,
+                                                            )
+                                                            .unwrap();
 
                                                         shader.set_uniform_matrix_4_f32(
                                                             gl,
@@ -157,48 +163,98 @@ impl RenderPipeline {
                                                         //)
                                                     }
                                                 }
-
-                                                //obj.bind(gl);
-                                                // A bit ugly with the need to pass in a shader id.
-                                                // But the does allow this render step a bit more control.
-                                                // Though it would be better added to the ctx or render.
-
-                                                // TODO - this would be the point to handle instancing?
-                                                //self.context
-                                                //    .renderer
-                                                //    .bind_model(gl, &prim.local_transform.get_view_matrix());
-
-                                                //obj.draw(gl,&self.context.renderer);
-                                                //self.context.renderer.draw_elements(
-                                                //    gl,
-                                                //    PrimitiveType::Triangles,
-                                                //    DrawElementType::UnsignedInt,
-                                                //    prim.indices_count,
-                                                //);
-
-                                                //self.context.renderer.draw_arrays(
-                                                //    gl,
-                                                //    PrimitiveType::Triangles,
-                                                //    0,
-                                                //    3,
-                                                //);
                                             }
                                         }
                                     }
                                 }
                             }
                         }
-                        Material::Unlit(_m) => {}
-                    };
+                        Material::Unlit(m) => {
+                            match (
+                                resource_manager.get_shader(&m.shader_internal_id),
+                                resource_manager.get_texture(&m.texture_internal_id),
+                            ) {
+                                (None, _) => {
+                                    panic!("Shader not found")
+                                }
+                                (_, None) => {
+                                    panic!("Texture not found")
+                                }
+                                (Some(shader), Some(texture)) => {
+                                    shader.use_shader(gl);
+
+                                    texture.bind(gl, TextureUnit::Texture0);
+                                    shader.set_uniform_1_i32(gl, "uTexture0", 0);
+
+                                    shader.set_uniform_matrix_4_f32(
+                                        gl,
+                                        "uView",
+                                        &self.context.view_matrix,
+                                    );
+                                    shader.set_uniform_matrix_4_f32(
+                                        gl,
+                                        "uProjection",
+                                        &self.context.project_matrix,
+                                    );
+
+                                    for item in &batch.items {
+                                        match resource_manager.get_renderable_object(
+                                            &item.renderable_object_internal_id,
+                                        ) {
+                                            None => {}
+                                            Some(obj) => {
+                                                // println!(
+                                                //     "drawing prim: indices_count = {}, material = {}, mesh_id = {}",
+                                                //     prim.indices_count, material_id, item.mesh_primitive_internal_id
+                                                // );
+
+                                                match obj {
+                                                    RenderableObject::Elements(ero) => {
+                                                        ero.bind(gl);
+
+                                                        let transform = _scene
+                                                            .transforms
+                                                            .get_transform(
+                                                                item.transform_internal_id,
+                                                            )
+                                                            .unwrap();
+
+                                                        shader.set_uniform_matrix_4_f32(
+                                                            gl,
+                                                            "uModel",
+                                                            &transform.get_view_matrix(),
+                                                        );
+
+                                                        self.context.renderer.draw_elements(
+                                                            gl,
+                                                            PrimitiveType::Triangles,
+                                                            DrawElementType::UnsignedInt,
+                                                            ero.indices_count as i32,
+                                                        );
+                                                    }
+                                                    RenderableObject::InstanceElements(_iero) => {
+                                                        //iero.bind(gl);
+                                                        //
+                                                        //let instance_count = 0;
+                                                        //
+                                                        //self.context.renderer.draw_elements_instanced(
+                                                        //    gl,
+                                                        //    PrimitiveType::Triangles,
+                                                        //    DrawElementType::UnsignedInt,
+                                                        //    iero.indices_count,
+                                                        //    instance_count
+                                                        //)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
-
-            //self.context.renderer.use_material(
-            //    gl,
-            //    *material_id,
-            //    &self.context.view_matrix,
-            //    &self.context.project_matrix,
-            //);
         }
     }
 

@@ -53,7 +53,7 @@ impl Texture {
         }
     }
 
-    pub fn bind(self, gl: &Context, texture_slot: TextureUnit) {
+    pub fn bind(&self, gl: &Context, texture_slot: TextureUnit) {
         unsafe {
             gl.active_texture(texture_slot.to_u32());
             gl.bind_texture(TEXTURE_2D, Some(self.texture));

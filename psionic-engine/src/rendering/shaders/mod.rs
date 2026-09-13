@@ -165,6 +165,22 @@ impl Shader {
         }
     }
 
+    pub fn set_uniform_1_i32(&self, gl: &Context, name: &str, value: i32) -> () {
+        unsafe {
+            let location = gl.get_uniform_location(self.program, name);
+
+            match location {
+                None => {
+                    // not found
+                    panic!("ERROR")
+                }
+                Some(loc) => {
+                    gl.uniform_1_i32(Some(&loc), value);
+                }
+            }
+        }
+    }
+
     pub fn use_shader(&self, gl: &Context) {
         unsafe {
             gl.use_program(Some(self.program));
