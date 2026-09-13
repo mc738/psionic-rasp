@@ -260,10 +260,173 @@ impl RenderPipeline {
 
     fn transparent_render_pass(
         &mut self,
-        _gl: &Context,
-        _scene: &SceneInstance,
-        _resource_manager: &ResourceManager,
+        gl: &Context,
+        scene: &SceneInstance,
+        resource_manager: &ResourceManager,
     ) {
+        for (material_id, batch) in &self.context.transparent_primitive_batches {
+            match resource_manager.get_material(material_id) {
+                None => {}
+                Some(material) => {
+                    match material {
+                        Material::Basic(m) => {
+                            match resource_manager.get_shader(&m.shader_internal_id) {
+                                None => {}
+                                Some(shader) => {
+                                    shader.use_shader(gl);
+                                    shader.set_uniform_matrix_4_f32(
+                                        gl,
+                                        "uView",
+                                        &self.context.view_matrix,
+                                    );
+                                    shader.set_uniform_matrix_4_f32(
+                                        gl,
+                                        "uProjection",
+                                        &self.context.project_matrix,
+                                    );
+
+                                    for item in &batch.items {
+                                        match resource_manager.get_renderable_object(
+                                            &item.renderable_object_internal_id,
+                                        ) {
+                                            None => {}
+                                            Some(obj) => {
+                                                // println!(
+                                                //     "drawing prim: indices_count = {}, material = {}, mesh_id = {}",
+                                                //     prim.indices_count, material_id, item.mesh_primitive_internal_id
+                                                // );
+
+                                                match obj {
+                                                    RenderableObject::Elements(ero) => {
+                                                        ero.bind(gl);
+
+                                                        let transform = scene
+                                                            .transforms
+                                                            .get_transform(
+                                                                item.transform_internal_id,
+                                                            )
+                                                            .unwrap();
+
+                                                        shader.set_uniform_matrix_4_f32(
+                                                            gl,
+                                                            "uModel",
+                                                            &transform.get_view_matrix(),
+                                                        );
+
+                                                        self.context.renderer.draw_elements(
+                                                            gl,
+                                                            PrimitiveType::Triangles,
+                                                            DrawElementType::UnsignedInt,
+                                                            ero.indices_count as i32,
+                                                        );
+                                                    }
+                                                    RenderableObject::InstanceElements(_iero) => {
+                                                        //iero.bind(gl);
+                                                        //
+                                                        //let instance_count = 0;
+                                                        //
+                                                        //self.context.renderer.draw_elements_instanced(
+                                                        //    gl,
+                                                        //    PrimitiveType::Triangles,
+                                                        //    DrawElementType::UnsignedInt,
+                                                        //    iero.indices_count,
+                                                        //    instance_count
+                                                        //)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Material::Unlit(m) => {
+                            match (
+                                resource_manager.get_shader(&m.shader_internal_id),
+                                resource_manager.get_texture(&m.texture_internal_id),
+                            ) {
+                                (None, _) => {
+                                    panic!("Shader not found")
+                                }
+                                (_, None) => {
+                                    panic!("Texture not found")
+                                }
+                                (Some(shader), Some(texture)) => {
+                                    shader.use_shader(gl);
+
+                                    texture.bind(gl, TextureUnit::Texture0);
+                                    shader.set_uniform_1_i32(gl, "uTexture0", 0);
+
+                                    shader.set_uniform_matrix_4_f32(
+                                        gl,
+                                        "uView",
+                                        &self.context.view_matrix,
+                                    );
+                                    shader.set_uniform_matrix_4_f32(
+                                        gl,
+                                        "uProjection",
+                                        &self.context.project_matrix,
+                                    );
+
+                                    for item in &batch.items {
+                                        match resource_manager.get_renderable_object(
+                                            &item.renderable_object_internal_id,
+                                        ) {
+                                            None => {}
+                                            Some(obj) => {
+                                                // println!(
+                                                //     "drawing prim: indices_count = {}, material = {}, mesh_id = {}",
+                                                //     prim.indices_count, material_id, item.mesh_primitive_internal_id
+                                                // );
+
+                                                match obj {
+                                                    RenderableObject::Elements(ero) => {
+                                                        ero.bind(gl);
+
+                                                        let transform = scene
+                                                            .transforms
+                                                            .get_transform(
+                                                                item.transform_internal_id,
+                                                            )
+                                                            .unwrap();
+
+                                                        shader.set_uniform_matrix_4_f32(
+                                                            gl,
+                                                            "uModel",
+                                                            &transform.get_view_matrix(),
+                                                        );
+
+                                                        self.context.renderer.draw_elements(
+                                                            gl,
+                                                            PrimitiveType::Triangles,
+                                                            DrawElementType::UnsignedInt,
+                                                            ero.indices_count as i32,
+                                                        );
+                                                    }
+                                                    RenderableObject::InstanceElements(_iero) => {
+                                                        //iero.bind(gl);
+                                                        //
+                                                        //let instance_count = 0;
+                                                        //
+                                                        //self.context.renderer.draw_elements_instanced(
+                                                        //    gl,
+                                                        //    PrimitiveType::Triangles,
+                                                        //    DrawElementType::UnsignedInt,
+                                                        //    iero.indices_count,
+                                                        //    instance_count
+                                                        //)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     fn ui_render_pass(
@@ -334,14 +497,38 @@ impl RenderPipeline {
         unsafe {
             gl.enable(glow::DEPTH_TEST);
             gl.enable(glow::CULL_FACE);
+            gl.disable(glow::BLEND);
+            gl.depth_func(glow::LESS);
+            gl.depth_mask(true);
         }
 
         self.opaque_render_pass(gl, scene, resource_manager);
+
+        unsafe {
+            gl.enable(glow::BLEND);
+            gl.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);
+
+            gl.depth_mask(false);
+            gl.enable(glow::DEPTH_TEST); // still test depth
+            gl.disable(glow::CULL_FACE); // avoid missing backfaces
+        }
+
         self.transparent_render_pass(gl, scene, resource_manager);
+
+        // Restore the depth mask write state.
+        // I am not exact sure why this is needed, but it is.
+        // The call above to set it to true before the opaque pass SHOULD be enough, right?
+        // But apparently it is not and that pass will be wiped without this.
+        // So, until I figure out why, probably be not to delete this!
+        unsafe {
+            gl.depth_mask(true);
+        }
         self.ui_render_pass(gl, scene, resource_manager);
         self.text_render_pass(gl, scene, resource_manager);
         self.particles_render_pass(gl, scene, resource_manager);
         self.post_fx_render_pass(gl, scene, resource_manager);
+
+        // TODO set gl state to something "clean" for the next frame.
     }
 
     pub fn reset_context(&mut self) {

@@ -43,6 +43,7 @@ impl Renderer {
     pub fn new(gl: &Context) -> Self {
         unsafe {
             gl.clear_color(0.3, 0.3, 0.5, 1.0);
+            gl.clear_depth_f64(1.0);
             gl.disable(glow::DEPTH_TEST);
             gl.disable(glow::CULL_FACE);
             gl.viewport(0, 0, 1280, 720);
@@ -95,8 +96,15 @@ impl Renderer {
 
     pub fn clear(&mut self, gl: &Context) {
         unsafe {
-            gl.clear(glow::COLOR_BUFFER_BIT);
-            gl.clear(glow::DEPTH_BUFFER_BIT);
+            gl.bind_framebuffer(glow::FRAMEBUFFER, None); // or your FBO id
+            //gl.clear_depth(1.0);
+            gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
+            //gl.enable(glow::DEPTH_TEST);
+            //gl.depth_func(glow::LESS);
+            //gl.depth_mask(true);
+
+            //gl.clear(glow::COLOR_BUFFER_BIT);
+            //gl.clear(glow::DEPTH_BUFFER_BIT);
         }
     }
 
