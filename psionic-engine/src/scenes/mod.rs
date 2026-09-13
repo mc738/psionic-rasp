@@ -31,18 +31,14 @@ pub struct TransformsCollection {
 
 impl SceneInstance {
     pub fn create(
-        nodes: Vec<SceneGraphNode>,
-        transforms: Vec<Transform>,
-        world_root: Transform,
+        graph: SceneGraph,
+        transforms: TransformsCollection,
         main_camera: Camera,
     ) -> Self {
         Self {
             main_camera,
-            graph: SceneGraph { nodes },
-            transforms: TransformsCollection {
-                root: world_root,
-                transforms,
-            },
+            graph,
+            transforms,
         }
     }
 
@@ -64,7 +60,9 @@ impl SceneInstance {
     }
 
     pub fn get_transform(&self, transform_internal_id: TransformInternalId) -> Option<&Transform> {
-        self.transforms.transforms.get(transform_internal_id as usize)
+        self.transforms
+            .transforms
+            .get(transform_internal_id as usize)
     }
 
     /// The method currently does nothing.

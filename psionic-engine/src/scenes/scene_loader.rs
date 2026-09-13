@@ -10,11 +10,16 @@ use crate::rendering::shaders::Shader;
 use crate::rendering::textures::Texture;
 use crate::resources::resource_manager::{NewResourcesCollection, PreviousResourcesCollection};
 use crate::resources::resources_map::ResourcesMap;
-use crate::scenes::scene_graph::SceneGraphNodeRenderable;
-use crate::scenes::{SceneGraphNode, SceneInstance};
-use crate::templates::{MaterialTemplateType, SceneTemplate};
+use crate::scenes::scene_graph::{NodeId, SceneGraph, SceneGraphNodeRenderable};
+use crate::scenes::{SceneGraphNode, SceneInstance, TransformsCollection};
+use crate::templates::{
+    MaterialTemplateType, ModelTemplate, SceneGraphNodeTemplate, SceneGraphNodeTemplateType,
+    SceneTemplate,
+};
 use glow::Context;
+use std::collections::HashMap;
 use std::mem;
+use uuid::Uuid;
 
 pub struct SceneLoader {
     template: SceneTemplate,
@@ -32,7 +37,15 @@ pub struct PreviousScene {
 
 impl SceneLoader {
     pub fn create(template: SceneTemplate) -> Self {
-        Self { template }
+        let mut models_map = HashMap::new();
+
+        for model in &template.models {
+            models_map.insert(model.id, model);
+        }
+
+        Self {
+            template,
+        }
     }
 
     pub fn load_scene(&self, gl: &Context, display_width: f32, display_height: f32) -> LoadedScene {
@@ -243,25 +256,208 @@ impl SceneLoader {
         result
     }
 
+    fn build_node(
+        &self,
+        resources_map: &ResourcesMap,
+        node: &SceneGraphNodeTemplate,
+        current_transform_id: u32,
+        current_node_id: u32,
+        transforms: &mut Vec<Transform>,
+        nodes: &mut Vec<SceneGraphNode>,
+        parent_internal_id: Option<NodeId>,
+    ) -> (u32, u32) {
+        let mut renderables = Vec::new();
+
+        let mut next_transform_id = current_transform_id;
+        let mut next_node_id = current_node_id;
+
+        match node.template_type {
+            SceneGraphNodeTemplateType::Empty => {},
+            SceneGraphNodeTemplateType::Model(model_id) => {
+                match resources_map.models_map.get_internal_id(&model_id) {
+                    Some(model) => {
+                        let model_template = self.template.models.get(model as usize).unwrap();
+
+                        for mesh in &model_template.meshes {
+                            for primitive in &mesh.primitives {
+                                match (
+                                    resources_map
+                                        .renderable_objects_map
+                                        .get_internal_id(&primitive.id),
+                                    resources_map
+                                        .materials_map
+                                        .get_internal_id(&primitive.material_id),
+                                ) {
+                                    (None, _) => {}
+                                    (_, None) => {}
+                                    (Some(ro_id), Some(m_id)) => {
+                                        let renderable =
+                                            SceneGraphNodeRenderable::create(ro_id, m_id);
+                                        renderables.push(renderable);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    None => {
+                        panic!("Model with id {} not found in resource map", model_id);
+                    }
+                }
+            }
+        }
+
+        transforms.push(node.transform.clone());
+        next_transform_id += 1;
+
+        let mut children = Vec::new();
+
+        for child in &node.children {
+            let (nni, nti) = self.build_node(
+                &resources_map,
+                child,
+                next_node_id,
+                next_transform_id,
+                transforms,
+                nodes,
+                Some(next_node_id),
+            );
+            next_node_id = nni;
+            next_transform_id = nti;
+            children.push(nni);
+        }
+
+        transforms.push(node.transform.clone());
+
+        nodes.push(SceneGraphNode {
+            id: next_node_id,
+            active: true,
+            transform_internal_id: next_transform_id,
+            parent_node_id: parent_internal_id,
+            children,
+            renderables,
+        });
+
+        (next_node_id, next_transform_id)
+    }
+
+    /// Builds the scene internals.
+    /// This includes building the scene graph and the transforms collection.
+    /// It returns them as a tuple, not the prettiest.
+    /// That is why it is internal.
+    fn build_scene_internals(
+        &self,
+        resource_map: &ResourcesMap,
+    ) -> (SceneGraph, TransformsCollection) {
+        let mut nodes = Vec::new();
+        let mut transforms: Vec<Transform> = Vec::new();
+
+        let mut next_transform_id = 0;
+        let mut next_node_id = 0;
+
+        for node in &self.template.scene_graph_template.root_node.children {
+            //transforms.push(node.transform.clone());
+
+            let (nni, nti) = self.build_node(
+                resource_map,
+                node,
+                next_transform_id,
+                next_node_id,
+                &mut transforms,
+                &mut nodes,
+                None,
+            );
+
+            next_node_id = nni;
+            next_transform_id = nti;
+
+            /*
+            let mut renderables = Vec::new();
+
+            match node.template_type {
+                SceneGraphNodeTemplateType::Model(model_id) => {
+                    match resource_map.models_map.get_internal_id(&model_id) {
+                        Some(model) => {
+                            let model_template = self.template.models.get(model as usize).unwrap();
+
+                            for mesh in &model_template.meshes {
+                                for primitive in &mesh.primitives {
+                                    match (
+                                        resource_map
+                                            .renderable_objects_map
+                                            .get_internal_id(&primitive.id),
+                                        resource_map
+                                            .materials_map
+                                            .get_internal_id(&primitive.material_id),
+                                    ) {
+                                        (None, _) => {}
+                                        (_, None) => {}
+                                        (Some(ro_id), Some(m_id)) => {
+                                            let renderable =
+                                                SceneGraphNodeRenderable::create(ro_id, m_id);
+                                            renderables.push(renderable);
+                                        }
+                                    }
+                                }
+                            }
+
+                            transforms.push(node.transform.clone());
+                            next_transform_id += 1;
+                        }
+                        None => {
+                            panic!("Model with id {} not found in resource map", model_id);
+                        }
+                    }
+                }
+            }
+
+            transforms.push(node.transform.clone());
+
+            nodes.push(SceneGraphNode {
+                id: next_node_id,
+                active: true,
+                transform_internal_id: next_transform_id,
+                parent_node_id: None,
+                children: vec![],
+                renderables,
+            });
+
+            next_node_id += 1;
+            next_transform_id += 1;
+            */
+        }
+
+        (
+            SceneGraph { nodes },
+            TransformsCollection {
+                root: Transform::default(),
+                transforms,
+            },
+        )
+    }
+
     pub fn build_scene_instance(
         &self,
         display_width: f32,
         display_height: f32,
         resource_map: &ResourcesMap,
     ) -> SceneInstance {
-        let mut nodes: Vec<SceneGraphNode> = Vec::new();
+        //let mut nodes: Vec<SceneGraphNode> = Vec::new();
         let mut transforms: Vec<Transform> = Vec::new();
-        
-        
+
         let mut main_camera = Camera::create(display_width, display_height);
         main_camera.initialize(&self.template.main_camera_settings);
-        
+
         //main_camera.yaw = -std::f32::consts::FRAC_PI_2;
-      
+
         let mut next_transform_id = 0;
 
         let mut next_node_id = 0;
 
+        let (graph, transforms) = self.build_scene_internals(resource_map);
+        //
+        //self.template.scene_graph_template.root_node.build_scene_graph_nodes();
+
+        /*
         // The transforms stored for models are top level.
         // This is because in general you will probably want to move/rotate the whole model most the time.
         for model in &self.template.models {
@@ -294,6 +490,8 @@ impl SceneLoader {
                 }
             }
 
+            //
+
             // TODO parents and children
             nodes.push(SceneGraphNode {
                 id: next_node_id,
@@ -301,14 +499,14 @@ impl SceneLoader {
                 transform_internal_id: next_transform_id,
                 parent_node_id: None,
                 children: vec![],
-                // TODO add any resource links.
                 renderables,
             });
 
             next_transform_id = next_transform_id + 1;
             next_node_id = next_node_id + 1;
         }
+        */
 
-        SceneInstance::create(nodes, transforms, Transform::default(), main_camera)
+        SceneInstance::create(graph, transforms, main_camera)
     }
 }

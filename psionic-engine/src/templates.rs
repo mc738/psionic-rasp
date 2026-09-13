@@ -8,8 +8,34 @@ pub struct SceneTemplate {
     pub textures: Vec<TextureTemplate>,
     pub materials: Vec<MaterialTemplate>,
     pub models: Vec<ModelTemplate>,
-    pub main_camera_settings: MainCameraSettings
+    pub main_camera_settings: MainCameraSettings,
+    pub scene_graph_template: SceneGraphTemplate
 }
+
+pub struct SceneGraphTemplate {
+    pub root_node: SceneGraphNodeTemplate
+}
+
+
+impl SceneGraphNodeTemplate {
+
+}
+
+pub struct SceneGraphNodeTemplate {
+    pub id: Uuid,
+    pub transform: Transform,
+    pub children: Vec<SceneGraphNodeTemplate>,
+    pub template_type: SceneGraphNodeTemplateType
+
+}
+
+pub enum  SceneGraphNodeTemplateType {
+    Empty,
+    Model(uuid::Uuid)
+}
+
+
+
 
 pub struct MainCameraSettings {
     pub initial_position: Vec3,
