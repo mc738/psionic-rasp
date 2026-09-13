@@ -2,23 +2,34 @@
 use crate::core::InternalIdMap;
 use crate::maths::Transform;
 use crate::rendering::NewRendererResources;
+use crate::rendering::geometry::{ElementsRenderableObject, RenderableObject};
 use crate::rendering::materials::{BasicMaterial, Material, UnlitMaterial};
 use crate::rendering::models::{
     Mesh, MeshInternalId, MeshPrimitive, MeshPrimitiveInternalId, Model, NewModelStoreResources,
 };
 use crate::rendering::shaders::Shader;
 use crate::rendering::textures::Texture;
+use crate::resources::resource_manager::{NewResourcesCollection, PreviousResourcesCollection};
+use crate::resources::resources_map::ResourcesMap;
+use crate::scenes::scene_graph::SceneGraphNodeRenderable;
 use crate::scenes::{SceneGraphNode, SceneInstance};
 use crate::templates::{MaterialTemplateType, SceneTemplate};
 use glow::Context;
 use std::mem;
 use uuid::Uuid;
-use crate::rendering::geometry::{ElementsRenderableObject, RenderableObject};
-use crate::resources::resource_manager::NewResourcesCollection;
-use crate::resources::resources_map::ResourcesMap;
 
 pub struct SceneLoader {
     template: SceneTemplate,
+}
+
+pub struct LoadedScene {
+    pub scene_instance: SceneInstance,
+    pub resources: NewResourcesCollection,
+}
+
+pub struct PreviousScene {
+    pub scene_instance: SceneInstance,
+    pub resources: PreviousResourcesCollection,
 }
 
 impl SceneLoader {
@@ -158,6 +169,16 @@ impl SceneLoader {
     }
     */
 
+    pub fn load_scene(&self, gl: &Context, display_width: f32, display_height: f32) -> LoadedScene {
+        let new_resources = self.load_resources(gl);
+        let new_scene =
+            self.build_scene_instance(display_width, display_height, &new_resources.resource_map);
+        LoadedScene {
+            scene_instance: new_scene,
+            resources: new_resources,
+        }
+    }
+
     pub fn load_resources(&self, gl: &Context) -> NewResourcesCollection {
         let mut shaders: Vec<Shader> = Vec::with_capacity(self.template.shaders.len());
         let mut textures: Vec<Texture> = Vec::with_capacity(self.template.textures.len());
@@ -204,7 +225,6 @@ impl SceneLoader {
             material_internal_id = material_internal_id + 1;
         }
 
-
         // Models
 
         let mut models: Vec<Model> = Vec::new();
@@ -219,6 +239,11 @@ impl SceneLoader {
 
         let mut mesh_ids: Vec<MeshInternalId> = Vec::new();
         let mut primitive_ids: Vec<MeshPrimitiveInternalId> = Vec::new();
+
+        let mut renderable_objects = Vec::new();
+        let mut renderable_objects_map = InternalIdMap::new();
+
+        let mut next_renderable_object_id = 0;
 
         for model in &self.template.models {
             //mesh_ids.clear();
@@ -238,11 +263,24 @@ impl SceneLoader {
                         &prim.local_transform,
                     );
 
+                    // Bit cheeky perhaps, but make the renderable object from the primitive.
+                    // Then add it to the list.
+                    // It is done here so it can easily share the same id as the primitive.
+                    let em = ElementsRenderableObject::from_mesh_primitive(&gl, &new_primitive);
+
                     primitives.push(new_primitive);
                     mesh_primitives_map.add(&prim.id, next_primitive_id);
                     primitive_ids.push(next_primitive_id);
 
-                    next_primitive_id = next_primitive_id + 1
+                    next_primitive_id = next_primitive_id + 1;
+
+                    // Create renderable object.
+
+                    // ASSUMPTION - primitive id is the same as the renderable object id.
+                    renderable_objects_map.add(&prim.id, next_renderable_object_id);
+
+                    renderable_objects.push(RenderableObject::Elements(em));
+                    next_renderable_object_id = next_renderable_object_id + 1;
                 }
 
                 let new_mesh = Mesh::create(
@@ -270,16 +308,13 @@ impl SceneLoader {
             next_model_id = next_model_id + 1;
         }
 
-        let mut renderable_objects = Vec::new();
-        let mut renderable_objects_map = InternalIdMap::new();
-
-        let mut next_renderable_object_id = 0;
-
-
+        /*
         for prim in &primitives {
 
 
-            let ro_id = Uuid::new_v4();
+
+
+                //Uuid::new_v4();
 
             let em = ElementsRenderableObject::from_mesh_primitive(&gl, prim);
             renderable_objects_map.add(&ro_id, next_renderable_object_id);
@@ -287,6 +322,7 @@ impl SceneLoader {
             renderable_objects.push(RenderableObject::Elements(em));
             next_renderable_object_id = next_renderable_object_id + 1;
         }
+        */
 
         NewResourcesCollection {
             renderable_objects,
@@ -357,7 +393,12 @@ impl SceneLoader {
         result
     }
 
-    pub fn build_scene_instance(&self, display_width: f32, display_height: f32) -> SceneInstance {
+    pub fn build_scene_instance(
+        &self,
+        display_width: f32,
+        display_height: f32,
+        resource_map: &ResourcesMap,
+    ) -> SceneInstance {
         let mut nodes: Vec<SceneGraphNode> = Vec::new();
         let mut transforms: Vec<Transform> = Vec::new();
         let mut main_camera = Camera::create(display_width, display_height);
@@ -367,19 +408,53 @@ impl SceneLoader {
 
         let mut next_transform_id = 0;
 
+        let mut next_node_id = 0;
+
         // The transforms stored for models are top level.
         // This is because in general you will probably want to move/rotate the whole model most the time.
         for model in &self.template.models {
             transforms.push(model.world_transform.clone());
 
+            let mut renderables = Vec::new();
+
+            for mesh in &model.meshes {
+                for primitive in &mesh.primitives {
+                    let renderable_obj_id = resource_map
+                        .renderable_objects_map
+                        .get_internal_id(&primitive.id);
+                    let material_id = resource_map
+                        .materials_map
+                        .get_internal_id(&primitive.material_id);
+
+                    // ASSUMPTION - primitive id is the same as the renderable object id.
+                    match (renderable_obj_id, material_id) {
+                        (None, _) => {
+                            println!("No renderable object id for primitive: {}", &primitive.id);
+                        }
+                        (_, None) => {
+                            println!("No material id for primitive: {}", &primitive.material_id);
+                        }
+                        (Some(ro_id), Some(m_id)) => {
+                            let renderable = SceneGraphNodeRenderable::create(ro_id, m_id);
+                            renderables.push(renderable);
+                        }
+                    }
+                }
+            }
+
+            // TODO parents and children
             nodes.push(SceneGraphNode {
+                id: next_node_id,
                 active: true,
                 transform_internal_id: next_transform_id,
                 parent_node_id: None,
                 children: vec![],
+                // TODO add any resource links.
+                renderables,
             });
 
             next_transform_id = next_transform_id + 1;
+            next_node_id = next_node_id + 1;
         }
 
         SceneInstance::create(nodes, transforms, Transform::default(), main_camera)

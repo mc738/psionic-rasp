@@ -1,12 +1,13 @@
 ﻿use crate::maths::Transform;
 use crate::rendering::Renderer;
 use crate::rendering::core::{DrawElementType, PrimitiveType};
-use crate::rendering::geometry::RenderableObject;
+use crate::rendering::geometry::{RenderableObject, RenderableObjectInternalId};
 use crate::rendering::materials::Material;
 use crate::rendering::models::MeshPrimitive;
+use crate::resources::ResourceLink;
 use crate::resources::resource_manager::ResourceManager;
 use crate::scenes::SceneInstance;
-use crate::scenes::scene_graph::TransformInternalId;
+use crate::scenes::scene_graph::{NodeId, TransformInternalId};
 use glam::Mat4;
 use glow::{Context, HasContext};
 use std::cmp::Ordering;
@@ -25,6 +26,7 @@ pub struct TransparentRenderBatch {
 pub struct RenderBatchItem {
     pub renderable_object_internal_id: u32,
     pub transform_internal_id: TransformInternalId,
+    pub node_id: NodeId,
     pub distance_to_camera: f32,
 }
 
@@ -353,9 +355,44 @@ impl RenderPipelineContext {
         self.opaque_primitive_batches.clear();
         self.transparent_primitive_batches.clear();
 
+        let mut renderable_object_ids = Vec::new();
 
+        // This will handle getting all nodes with renderable resources that are active (including checking their parents)
+        //let nodes_with_renderables = scene.graph.get_renderable_nodes();
 
+        for node in &scene.graph.nodes {
+            if (scene.graph.is_active(node.id)) {
+                for renderable in &node.renderables {
+                    renderable_object_ids.push(renderable);
 
+                    let rbi = RenderBatchItem {
+                        renderable_object_internal_id: renderable.renderable_object_internal_id,
+                        transform_internal_id: node.transform_internal_id,
+                        node_id: node.id,
+                        distance_to_camera: 0.0,
+                    };
+
+                    match resource_manager.get_material(&renderable.renderable_object_internal_id) {
+                        None => {
+                            println!(
+                                "No material found for renderable object with internal ID: {}",
+                                renderable.renderable_object_internal_id
+                            );
+                        }
+                        Some(m) => match m.is_transparent() {
+                            true => self.add_to_transparent_primitive_batches(
+                                renderable.renderable_object_internal_id,
+                                rbi,
+                            ),
+                            false => self.add_to_opaque_primitive_batches(
+                                renderable.renderable_object_internal_id,
+                                rbi,
+                            ),
+                        },
+                    }
+                }
+            }
+        }
     }
 
     /*
@@ -384,7 +421,6 @@ impl RenderPipelineContext {
         }
     }
     */
-
 
     pub fn sort(&mut self) {
         // Opaque are items render from front to back.

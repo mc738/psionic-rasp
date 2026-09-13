@@ -15,7 +15,7 @@ pub struct ResourceManager {
     models: Vec<Model>,
     meshes: Vec<Mesh>,
     primitives: Vec<MeshPrimitive>,
-    resource_map: ResourcesMap,
+    pub resource_map: ResourcesMap,
 }
 
 pub struct NewResourcesCollection {

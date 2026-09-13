@@ -1,30 +1,26 @@
+use crate::input::{InputManager, InputMap};
 use glow::{Context, HasContext};
-use psionic_engine::render_pipeline::{
-    RenderPipeline, RenderPipelineConfiguration
-};
-use psionic_engine::scenes::{SceneInstance};
+use psionic_engine::camera::Camera;
+use psionic_engine::render_pipeline::{RenderPipeline, RenderPipelineConfiguration};
+use psionic_engine::resources::resource_manager::ResourceManager;
+use psionic_engine::resources::resources_map::ResourcesMap;
+use psionic_engine::scenes::SceneInstance;
+use psionic_engine::scenes::scene_loader::{LoadedScene, PreviousScene, SceneLoader};
 use psionic_engine::templates::SceneTemplate;
-use std::mem;
 use raw_window_handle::HasWindowHandle;
+use std::mem;
+use winit::keyboard::PhysicalKey;
 use winit::window::Window;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::EventLoop,
     window::WindowBuilder,
 };
-use winit::keyboard::PhysicalKey;
-use psionic_engine::camera::Camera;
-use psionic_engine::resources::resource_manager::ResourceManager;
-use psionic_engine::resources::resources_map::ResourcesMap;
-use psionic_engine::scenes::scene_loader::SceneLoader;
-use crate::input::{InputManager, InputMap};
 
-pub mod platform;
 pub mod input;
-
+pub mod platform;
 
 pub trait Game {
-
     fn load(&mut self, ctx: &mut RuntimeContext) -> ();
     fn update(&mut self, ctx: &mut RuntimeContext, dt: &f32) -> ();
 }
@@ -38,7 +34,6 @@ pub struct RuntimeContext {
     //renderable_store: RenderableStore,
     pub input_manager: InputManager,
 }
-
 
 pub struct RuntimeConfiguration {
     main_scene: SceneTemplate,
@@ -123,7 +118,7 @@ impl Runtime {
         let scene_loader = SceneLoader::create(cfg.main_scene);
 
         unsafe {
-            gl.viewport(0, 0,1280, 720);
+            gl.viewport(0, 0, 1280, 720);
         }
 
         let mut input_manager = InputManager::new();
@@ -143,7 +138,7 @@ impl Runtime {
                 //renderable_store: RenderableStore::new(),
 
                 //resources_map: ResourcesMap::blank(),
-                input_manager
+                input_manager,
             },
             swap_buffers: Box::new(swap_buffers),
             window_width: 1280.,
@@ -152,6 +147,12 @@ impl Runtime {
     }
 
     pub fn load_scene(&mut self) {
+        let new_scene =
+            self.scene_loader
+                .load_scene(&self.gl, self.window_width, self.window_height);
+
+        let previous_scene = self.context.swap_scene(new_scene);
+
         //let new_resources = self.scene_loader.load_resources(&self.gl);
 
         //let renderer_resources = self.scene_loader.load_scene_render_resources(&self.gl);
@@ -183,7 +184,10 @@ impl Runtime {
         //    renderable_objects_map: (),
         //};
 
-        let previous_resources = self.context.resource_manager.swap_resources(self.scene_loader.load_resources(&self.gl));
+        //let previous_resources = self
+        //    .context
+        //    .resource_manager
+        //    .swap_resources(self.scene_loader.load_resources(&self.gl));
 
         //let previous_renderer_resources = self
         //    .render_pipeline
@@ -196,15 +200,15 @@ impl Runtime {
 
         // No deferrer clear up here (currently at least).
         // So free up all the renderer resources.
-        for shader in previous_resources.shaders {
+        for shader in previous_scene.resources.shaders {
             shader.free(&self.gl);
         }
 
-        for texture in previous_resources.textures {
+        for texture in previous_scene.resources.textures {
             texture.free(&self.gl);
         }
 
-        for ro in previous_resources.renderable_objects {
+        for ro in previous_scene.resources.renderable_objects {
             ro.free(&self.gl);
         }
 
@@ -214,13 +218,17 @@ impl Runtime {
         let main_camera = Camera::create(self.window_width, self.window_height);
 
         // Now that everything is loaded, create a new scene instance.
-        let new_scene = self.scene_loader.build_scene_instance(self.window_width, self.window_height);
-
-        let old_scene = mem::replace(&mut self.context.active_scene, new_scene);
+        //let new_scene = self.scene_loader.build_scene_instance(
+        //    self.window_width,
+        //    self.window_height,
+        //    &self.context.resource_manager.resource_map,
+        //);
+        //
+        //let old_scene = mem::replace(&mut self.context.active_scene, new_scene);
 
         // The old scene should have nothing left to clean up.
         // This call currently does nothing, but in the future scenes might have managed resources that need freeing.
-        old_scene.free(&self.gl);
+        previous_scene.scene_instance.free(&self.gl);
     }
 
     pub fn run(mut self) -> () {
@@ -246,12 +254,18 @@ impl Runtime {
                             WindowEvent::HoveredFile(_) => {}
                             WindowEvent::HoveredFileCancelled => {}
                             WindowEvent::Focused(_) => {}
-                            WindowEvent::KeyboardInput { event: keyboard_event, .. } => {
+                            WindowEvent::KeyboardInput {
+                                event: keyboard_event,
+                                ..
+                            } => {
                                 let key = keyboard_event.physical_key;
 
                                 match key {
                                     PhysicalKey::Code(kc) => {
-                                        self.context.input_manager.update_keyboard_key_state(&kc, keyboard_event.state.is_pressed())
+                                        self.context.input_manager.update_keyboard_key_state(
+                                            &kc,
+                                            keyboard_event.state.is_pressed(),
+                                        )
                                     }
                                     PhysicalKey::Unidentified(_) => {
                                         // Currently there is no handling for unidentified keys.
@@ -276,7 +290,6 @@ impl Runtime {
                             WindowEvent::Occluded(_) => {}
                             WindowEvent::RedrawRequested => {}
                         }
-
                     }
                     Event::AboutToWait => {
                         let now = std::time::Instant::now();
@@ -306,5 +319,14 @@ impl Runtime {
                 }
             })
             .unwrap();
+    }
+}
+
+impl RuntimeContext {
+    pub fn swap_scene(&mut self, scene: LoadedScene) -> PreviousScene {
+        PreviousScene {
+            scene_instance: mem::replace(&mut self.active_scene, scene.scene_instance),
+            resources: self.resource_manager.swap_resources(scene.resources),
+        }
     }
 }
