@@ -6,6 +6,7 @@ use crate::rendering::materials::Material;
 use crate::rendering::models::MeshPrimitive;
 use crate::resources::resource_manager::ResourceManager;
 use crate::scenes::SceneInstance;
+use crate::scenes::scene_graph::TransformInternalId;
 use glam::Mat4;
 use glow::{Context, HasContext};
 use std::cmp::Ordering;
@@ -23,6 +24,7 @@ pub struct TransparentRenderBatch {
 
 pub struct RenderBatchItem {
     pub renderable_object_internal_id: u32,
+    pub transform_internal_id: TransformInternalId,
     pub distance_to_camera: f32,
 }
 
@@ -264,10 +266,12 @@ impl RenderPipeline {
         self.context.view_matrix = scene.main_camera.get_view_matrix();
         self.context.project_matrix = scene.main_camera.get_projection_matrix();
 
+        self.context.build_batches(resource_manager, scene);
+
         // Gather the primitives for rendering.
-        for prim in renderable_store.gather_mesh_primitives() {
-            self.context.add_primitive(prim);
-        }
+        //for prim in renderable_store.gather_mesh_primitives() {
+        //    self.context.add_primitive(prim);
+        //}
 
         // Sort the render batches.
         self.context.sort();
@@ -345,6 +349,16 @@ impl RenderPipelineContext {
         };
     }
 
+    pub fn build_batches(&mut self, resource_manager: &ResourceManager, scene: &SceneInstance) {
+        self.opaque_primitive_batches.clear();
+        self.transparent_primitive_batches.clear();
+
+
+
+
+    }
+
+    /*
     pub fn add_primitive(&mut self, primitive: &MeshPrimitive) {
         match self
             .renderer
@@ -369,6 +383,8 @@ impl RenderPipelineContext {
             }
         }
     }
+    */
+
 
     pub fn sort(&mut self) {
         // Opaque are items render from front to back.

@@ -1,21 +1,17 @@
 use glow::{Context, HasContext};
 use psionic_engine::render_pipeline::{
-    RenderPipeline, RenderPipelineConfiguration, RenderPipelineContext,
+    RenderPipeline, RenderPipelineConfiguration
 };
-use psionic_engine::rendering::shaders::Shader;
-use psionic_engine::rendering::{RenderableStore, Renderer};
 use psionic_engine::scenes::{SceneInstance};
 use psionic_engine::templates::SceneTemplate;
 use std::mem;
 use raw_window_handle::HasWindowHandle;
-use winit::event_loop::ControlFlow;
 use winit::window::Window;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::EventLoop,
     window::WindowBuilder,
 };
-use winit::event::ElementState;
 use winit::keyboard::PhysicalKey;
 use psionic_engine::camera::Camera;
 use psionic_engine::resources::resource_manager::ResourceManager;
@@ -156,10 +152,12 @@ impl Runtime {
     }
 
     pub fn load_scene(&mut self) {
-        let renderer_resources = self.scene_loader.load_scene_render_resources(&self.gl);
-        let models = self
-            .scene_loader
-            .load_scene_models(&renderer_resources.materials_map);
+        //let new_resources = self.scene_loader.load_resources(&self.gl);
+
+        //let renderer_resources = self.scene_loader.load_scene_render_resources(&self.gl);
+        //let models = self
+        //    .scene_loader
+        //    .load_scene_models(&renderer_resources.materials_map);
 
         // TODO create any renderable objects required from here.
 
@@ -175,40 +173,44 @@ impl Runtime {
         //
         // It is left like this for now because other components might want to keep a resource map.
 
-        let resource_map = ResourcesMap {
-            materials_map: renderer_resources.materials_map.clone(),
-            textures_map: renderer_resources.textures_map.clone(),
-            shaders_map: renderer_resources.shaders_map.clone(),
-            models_map: models.models_id_map.clone(),
-            meshes_map: models.meshes_id_map.clone(),
-            mesh_primitives_map: models.primitives_id_map.clone(),
-            renderable_objects_map: (),
-        };
+        //let resource_map = ResourcesMap {
+        //    materials_map: renderer_resources.materials_map.clone(),
+        //    textures_map: renderer_resources.textures_map.clone(),
+        //    shaders_map: renderer_resources.shaders_map.clone(),
+        //    models_map: models.models_id_map.clone(),
+        //    meshes_map: models.meshes_id_map.clone(),
+        //    mesh_primitives_map: models.primitives_id_map.clone(),
+        //    renderable_objects_map: (),
+        //};
 
-        let previous_renderer_resources = self
-            .render_pipeline
-            .swap_renderer_resources(renderer_resources);
-        let previous_models = self
-            .context
-            .resource_manager
-            //.renderable_store
-            .swap_model_store_resources(models);
+        let previous_resources = self.context.resource_manager.swap_resources(self.scene_loader.load_resources(&self.gl));
+
+        //let previous_renderer_resources = self
+        //    .render_pipeline
+        //    .swap_renderer_resources(renderer_resources);
+        //let previous_models = self
+        //    .context
+        //    .resource_manager
+        //    //.renderable_store
+        //    .swap_model_store_resources(models);
 
         // No deferrer clear up here (currently at least).
         // So free up all the renderer resources.
-        for shader in previous_renderer_resources.shaders {
+        for shader in previous_resources.shaders {
             shader.free(&self.gl);
         }
 
-        for texture in previous_renderer_resources.textures {
+        for texture in previous_resources.textures {
             texture.free(&self.gl);
         }
 
-        for prim in previous_models.primitives {
-            prim.free(&self.gl);
+        for ro in previous_resources.renderable_objects {
+            ro.free(&self.gl);
+
+            //prim.free(&self.gl);
         }
 
-        self.context.resources_map = resource_map;
+        //self.context.resources_map = resource_map;
 
         // Build and initialize the main camera.
         let main_camera = Camera::create(self.window_width, self.window_height);
@@ -293,7 +295,7 @@ impl Runtime {
                         self.render_pipeline.render_scene(
                             &self.gl,
                             &self.context.active_scene,
-                            &self.context.renderable_store,
+                            &self.context.resource_manager,
                         );
                         (self.swap_buffers)();
 

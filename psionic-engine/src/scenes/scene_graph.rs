@@ -16,8 +16,8 @@ pub struct SceneGraph {
 }
 
 pub struct SceneGraphNode {
-    active: bool,
-    transform_internal_id: TransformInternalId,
-    parent_node_id: Option<NodeId>,
-    children: Vec<NodeId>,
+    pub active: bool,
+    pub transform_internal_id: TransformInternalId,
+    pub parent_node_id: Option<NodeId>,
+    pub children: Vec<NodeId>,
 }

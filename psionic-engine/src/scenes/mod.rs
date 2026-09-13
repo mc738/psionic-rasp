@@ -1,10 +1,10 @@
-﻿pub mod scene_loader;
-pub mod scene_graph;
+﻿pub mod scene_graph;
+pub mod scene_loader;
 
 use crate::camera::Camera;
 use crate::maths::Transform;
+use crate::scenes::scene_graph::{SceneGraph, SceneGraphNode, TransformInternalId};
 use glow::Context;
-use crate::scenes::scene_graph::{SceneGraph, SceneGraphNode};
 
 pub struct SceneInstance {
     pub graph: SceneGraph,
@@ -62,6 +62,10 @@ impl SceneInstance {
     /// This will update all dirty transforms.
     pub fn commit(&mut self) {
         self.main_camera.update_basis();
+    }
+
+    pub fn get_transform(&self, transform_internal_id: TransformInternalId) -> Option<&Transform> {
+        self.transforms.transforms.get(transform_internal_id as usize)
     }
 
     /// The method currently does nothing.
