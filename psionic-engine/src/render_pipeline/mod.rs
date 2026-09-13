@@ -247,11 +247,13 @@ impl RenderPipeline {
         gl: &Context,
         scene: &SceneInstance,
         resource_manager: &ResourceManager,
+        viewport_width: i32,
+        viewport_height: i32,
     ) {
         // Clear
 
         unsafe {
-            gl.viewport(0, 0, 1280, 720);
+            gl.viewport(0, 0, viewport_width, viewport_height);
             gl.disable(glow::DEPTH_TEST);
             gl.disable(glow::CULL_FACE);
             gl.clear_color(0.2, 0.2, 0.2, 1.0);

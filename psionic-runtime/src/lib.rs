@@ -7,6 +7,7 @@ use psionic_engine::scenes::SceneInstance;
 use psionic_engine::scenes::scene_loader::{LoadedScene, PreviousScene, SceneLoader};
 use psionic_engine::templates::SceneTemplate;
 use std::mem;
+use winit::event::ElementState;
 use winit::keyboard::PhysicalKey;
 use winit::window::Window;
 use winit::{
@@ -186,7 +187,11 @@ impl Runtime {
                     Event::WindowEvent { event, .. } => {
                         match event {
                             WindowEvent::ActivationTokenDone { .. } => {}
-                            WindowEvent::Resized(_) => {}
+                            WindowEvent::Resized(new_size) => {
+                                println!("Resized");
+                                self.window_width = new_size.width as f32;
+                                self.window_height = new_size.height as f32;
+                            }
                             WindowEvent::Moved(_) => {}
                             WindowEvent::CloseRequested => target.exit(),
                             WindowEvent::Destroyed => {}
@@ -214,11 +219,31 @@ impl Runtime {
                             }
                             WindowEvent::ModifiersChanged(_) => {}
                             WindowEvent::Ime(_) => {}
-                            WindowEvent::CursorMoved { .. } => {}
-                            WindowEvent::CursorEntered { .. } => {}
-                            WindowEvent::CursorLeft { .. } => {}
+                            WindowEvent::CursorMoved { position, .. } => {
+                                self.context
+                                    .input_manager
+                                    .update_mouse_position((position.x as f32, position.y as f32));
+                            }
+                            WindowEvent::CursorEntered { .. } => {
+                                self.context
+                                    .input_manager
+                                    .update_mouse_outside_window(false);
+                            }
+                            WindowEvent::CursorLeft { .. } => {
+                                self.context
+                                    .input_manager
+                                    .update_mouse_outside_window(true);
+                            }
                             WindowEvent::MouseWheel { .. } => {}
-                            WindowEvent::MouseInput { .. } => {}
+                            WindowEvent::MouseInput { button, state, .. } => {
+                                self.context.input_manager.update_mouse_button_state(
+                                    button,
+                                    match state {
+                                        ElementState::Pressed => true,
+                                        ElementState::Released => false,
+                                    },
+                                );
+                            }
                             WindowEvent::TouchpadMagnify { .. } => {}
                             WindowEvent::SmartMagnify { .. } => {}
                             WindowEvent::TouchpadRotate { .. } => {}
@@ -247,6 +272,8 @@ impl Runtime {
                             &self.gl,
                             &self.context.active_scene,
                             &self.context.resource_manager,
+                            self.window_width as i32,
+                            self.window_height as i32,
                         );
                         (self.swap_buffers)();
 
