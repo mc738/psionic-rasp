@@ -12,6 +12,8 @@ use crate::scenes::{SceneGraphNode, SceneInstance};
 use crate::templates::{MaterialTemplateType, SceneTemplate};
 use glow::Context;
 use std::mem;
+use uuid::Uuid;
+use crate::rendering::geometry::{ElementsRenderableObject, RenderableObject};
 use crate::resources::resource_manager::NewResourcesCollection;
 use crate::resources::resources_map::ResourcesMap;
 
@@ -268,8 +270,26 @@ impl SceneLoader {
             next_model_id = next_model_id + 1;
         }
 
+        let mut renderable_objects = Vec::new();
+        let mut renderable_objects_map = InternalIdMap::new();
+
+        let mut next_renderable_object_id = 0;
+
+
+        for prim in &primitives {
+
+
+            let ro_id = Uuid::new_v4();
+
+            let em = ElementsRenderableObject::from_mesh_primitive(&gl, prim);
+            renderable_objects_map.add(&ro_id, next_renderable_object_id);
+
+            renderable_objects.push(RenderableObject::Elements(em));
+            next_renderable_object_id = next_renderable_object_id + 1;
+        }
+
         NewResourcesCollection {
-            renderable_objects: Vec::new(),
+            renderable_objects,
             textures,
             shaders,
             materials,
@@ -283,8 +303,8 @@ impl SceneLoader {
                 models_map,
                 meshes_map,
                 mesh_primitives_map,
-                // TODO
-                renderable_objects_map: (),
+                // TODO - is a map actually needed?
+                renderable_objects_map,
             },
         }
     }

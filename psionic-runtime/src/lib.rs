@@ -206,8 +206,6 @@ impl Runtime {
 
         for ro in previous_resources.renderable_objects {
             ro.free(&self.gl);
-
-            //prim.free(&self.gl);
         }
 
         //self.context.resources_map = resource_map;

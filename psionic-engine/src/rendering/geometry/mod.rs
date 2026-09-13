@@ -13,6 +13,21 @@ pub enum RenderableObject {
     InstanceElements(InstanceElementsRenderableObject),
 }
 
+impl RenderableObject {
+
+
+    pub fn free(&self, gl: &glow::Context) {
+        match self {
+            RenderableObject::Elements(es) => {
+                es.free(gl);
+            }
+            RenderableObject::InstanceElements(ies) => {
+                ies.free(gl);
+            }
+        }
+    }
+}
+
 #[derive(Clone)]
 pub enum VertexAttribute {
     Float(f32),
@@ -178,5 +193,9 @@ impl InstanceElementsRenderableObject {
 
     pub fn from_mesh_primitive(primitive: &MeshPrimitive) -> InstanceElementsRenderableObject {
         panic!("todo")
+    }
+
+    pub fn free(&self, gl: &Context) {
+        self.voa.free(gl);
     }
 }
