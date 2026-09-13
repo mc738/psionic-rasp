@@ -1,7 +1,8 @@
-﻿use glam::Vec3;
+﻿use crate::maths::Transform;
+use crate::rendering::geometry::VertexCollection;
+use glam::Vec3;
+use stb_image::image::LoadResult;
 use uuid::Uuid;
-use crate::maths::Transform;
-use crate::rendering::geometry::{VertexCollection};
 
 pub struct SceneTemplate {
     pub shaders: Vec<ShaderTemplate>,
@@ -9,33 +10,26 @@ pub struct SceneTemplate {
     pub materials: Vec<MaterialTemplate>,
     pub models: Vec<ModelTemplate>,
     pub main_camera_settings: MainCameraSettings,
-    pub scene_graph_template: SceneGraphTemplate
+    pub scene_graph_template: SceneGraphTemplate,
 }
 
 pub struct SceneGraphTemplate {
-    pub root_node: SceneGraphNodeTemplate
+    pub root_node: SceneGraphNodeTemplate,
 }
 
-
-impl SceneGraphNodeTemplate {
-
-}
+impl SceneGraphNodeTemplate {}
 
 pub struct SceneGraphNodeTemplate {
     pub id: Uuid,
     pub transform: Transform,
     pub children: Vec<SceneGraphNodeTemplate>,
-    pub template_type: SceneGraphNodeTemplateType
-
+    pub template_type: SceneGraphNodeTemplateType,
 }
 
-pub enum  SceneGraphNodeTemplateType {
+pub enum SceneGraphNodeTemplateType {
     Empty,
-    Model(uuid::Uuid)
+    Model(uuid::Uuid),
 }
-
-
-
 
 pub struct MainCameraSettings {
     pub initial_position: Vec3,
@@ -56,9 +50,9 @@ pub struct TextureTemplate {
     pub height: u32,
 }
 
-pub struct  MaterialTemplate {
+pub struct MaterialTemplate {
     pub id: Uuid,
-    pub material_type: MaterialTemplateType
+    pub material_type: MaterialTemplateType,
 }
 
 pub enum MaterialTemplateType {
@@ -87,7 +81,7 @@ pub struct ModelTemplate {
 pub struct MeshTemplate {
     pub id: Uuid,
     pub primitives: Vec<MeshPrimitiveTemplate>,
-    pub local_transform: Transform
+    pub local_transform: Transform,
 }
 
 pub struct MeshPrimitiveTemplate {
@@ -104,6 +98,48 @@ impl MainCameraSettings {
             initial_position,
             initial_yaw,
             initial_pitch,
+        }
+    }
+}
+
+impl ShaderTemplate {
+    pub fn from_file(id: Uuid, vert_path: &str, frag_path: &str) -> ShaderTemplate {
+        let mut vert_code = std::fs::read_to_string(vert_path).unwrap();
+        let mut frag_code = std::fs::read_to_string(frag_path).unwrap();
+
+        if let Some(stripped) = vert_code.strip_prefix("\u{FEFF}") {
+            vert_code = stripped.to_owned();
+        }
+
+        if let Some(stripped) = frag_code.strip_prefix("\u{FEFF}") {
+            frag_code = stripped.to_owned();
+        }
+        ShaderTemplate {
+            id,
+            vertex_code: vert_code,
+            fragment_code: frag_code,
+        }
+    }
+}
+
+impl TextureTemplate {
+    pub fn from_file(id: Uuid, path: &str) -> TextureTemplate {
+        match stb_image::image::load_with_depth(path, 4, false) {
+            LoadResult::Error(_) => {
+                panic!("Failed to load texture")
+            }
+            LoadResult::ImageU8(img) => TextureTemplate {
+                id,
+                data: bytemuck::cast_slice(&img.data).to_vec(),
+                width: img.width as u32,
+                height: img.height as u32,
+            },
+            LoadResult::ImageF32(img) => TextureTemplate {
+                id,
+                data: bytemuck::cast_slice(&img.data).to_vec(),
+                width: img.width as u32,
+                height: img.height as u32,
+            },
         }
     }
 }

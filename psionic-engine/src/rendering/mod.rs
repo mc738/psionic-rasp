@@ -94,7 +94,10 @@ impl Renderer {
     */
 
     pub fn clear(&mut self, gl: &Context) {
-        unsafe { gl.clear(glow::COLOR_BUFFER_BIT) }
+        unsafe {
+            gl.clear(glow::COLOR_BUFFER_BIT);
+            gl.clear(glow::DEPTH_BUFFER_BIT);
+        }
     }
 
     pub fn draw_elements(

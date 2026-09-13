@@ -20,7 +20,9 @@ impl Texture {
 
             let texture_slot = TextureUnit::Texture0.to_u32();
             gl.active_texture(texture_slot);
-            gl.bind_texture(texture_slot, Some(texture));
+            gl.bind_texture(TEXTURE_2D, Some(texture));
+
+            assert_eq!(data.len(), (width * height * 4) as usize);
 
             gl.tex_image_2d(
                 TEXTURE_2D,

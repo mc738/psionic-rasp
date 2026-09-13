@@ -85,4 +85,8 @@ impl TransformsCollection {
             transforms: vec![],
         }
     }
+
+    pub fn get_transform(&self, transform_internal_id: TransformInternalId) -> Option<&Transform> {
+        self.transforms.get(transform_internal_id as usize)
+    }
 }

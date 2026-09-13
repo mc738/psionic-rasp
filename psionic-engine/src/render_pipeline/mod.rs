@@ -128,7 +128,7 @@ impl RenderPipeline {
                                                     RenderableObject::Elements(ero) => {
                                                         ero.bind(gl);
 
-                                                        let transform = Transform::default();
+                                                        let transform = _scene.transforms.get_transform(item.transform_internal_id).unwrap();
 
                                                         shader.set_uniform_matrix_4_f32(
                                                             gl,
@@ -274,6 +274,12 @@ impl RenderPipeline {
         self.context.sort();
 
         self.shadow_render_pass(gl, scene, resource_manager);
+
+        unsafe {
+            gl.enable(glow::DEPTH_TEST);
+            gl.enable(glow::CULL_FACE);
+        }
+
         self.opaque_render_pass(gl, scene, resource_manager);
         self.transparent_render_pass(gl, scene, resource_manager);
         self.ui_render_pass(gl, scene, resource_manager);

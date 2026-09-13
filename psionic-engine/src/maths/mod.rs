@@ -126,6 +126,18 @@ impl Transform {
             * Mat4::from_quat(self.rotation)
             * Mat4::from_scale(self.scale)
     }
+    
+    pub fn set_position(&mut self, position: Vec3) {
+        self.position = position;
+    }
+    
+    pub fn set_rotation(&mut self, rotation: Quat) {
+        self.rotation = rotation;
+    }
+    
+    pub fn set_scale(&mut self, scale: Vec3) {
+        self.scale = scale;
+    }
 }
 
 impl Float3 {
