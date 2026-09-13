@@ -166,9 +166,6 @@ impl Runtime {
             ro.free(&self.gl);
         }
 
-        // Build and initialize the main camera.
-        let _main_camera = Camera::create(self.window_width, self.window_height);
-
         // The old scene should have nothing left to clean up.
         // This call currently does nothing, but in the future scenes might have managed resources that need freeing.
         previous_scene.scene_instance.free(&self.gl);

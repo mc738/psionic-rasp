@@ -1,4 +1,5 @@
-﻿use glam::{Mat4, Vec3};
+﻿use crate::templates::MainCameraSettings;
+use glam::{Mat4, Vec3};
 
 #[allow(unused)]
 pub struct Camera {
@@ -10,7 +11,7 @@ pub struct Camera {
     pub forward: Vec3,
     pub right: Vec3,
     pub yaw: f32,
-    pitch: f32,
+    pub pitch: f32,
     zoom: f32,
     aspect_ratio: f32,
 }
@@ -45,7 +46,7 @@ impl Camera {
         glam::camera::rh::view::look_at_mat4(self.position, self.position + self.forward, self.up)
     }
 
-    pub fn update_basis(&mut self) {
+    pub fn update_orientation_vectors(&mut self) {
         // Standard FPS camera forward vector
         self.forward = Vec3::new(
             self.yaw.cos() * self.pitch.cos(),
@@ -55,14 +56,34 @@ impl Camera {
         .normalize();
 
         // Camera looks down -Z in OpenGL RH
-        self.forward = -self.forward;
+        //self.forward = -self.forward;
 
         // Recompute right and up properly
         self.right = Vec3::cross(self.forward, Vec3::Y).normalize();
         self.up = Vec3::cross(self.right, self.forward).normalize();
     }
 
+    pub fn set_forward(&mut self, forward: Vec3) {
+        self.forward = forward;
+        //self.update_basis();
+    }
+
+    pub fn set_right(&mut self, right: Vec3) {
+        self.right = right;
+    }
+
+    pub fn update_up(&mut self) {
+        self.up = Vec3::cross(self.right, self.forward).normalize();
+    }
+
     pub fn modify_position(&mut self, position: Vec3) {
         self.position = self.position + position;
+    }
+
+    pub fn initialize(&mut self, camera_data: &MainCameraSettings) {
+        self.position = camera_data.initial_position;
+        self.yaw = camera_data.initial_yaw;
+        self.pitch = camera_data.initial_pitch;
+        self.update_orientation_vectors();
     }
 }

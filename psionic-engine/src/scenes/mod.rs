@@ -60,7 +60,7 @@ impl SceneInstance {
     /// Commits the screen for rendering.
     /// This will update all dirty transforms.
     pub fn commit(&mut self) {
-        self.main_camera.update_basis();
+        self.main_camera.update_orientation_vectors();
     }
 
     pub fn get_transform(&self, transform_internal_id: TransformInternalId) -> Option<&Transform> {
